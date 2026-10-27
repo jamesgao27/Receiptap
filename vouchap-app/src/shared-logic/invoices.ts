@@ -1,7 +1,15 @@
 import { supabase } from './supabase';
 import { Invoice, InvoiceItem } from '@/types';
 import { getCurrentUser } from './auth';
-import { findOrCreateEntity, updateEntity, getEntityMergeMap, getEntityById, resolveEntityId } from './entities';
+import {
+  findOrCreateEntity,
+  updateEntity,
+  getEntityMergeMap,
+  getEntityById,
+  resolveEntityId,
+  mapJoinedEntityRow,
+  pickResolvedEntityForList,
+} from './entities';
 import { getAccountMergeMap, getAccountById, getAccountOptionsForDuplicateCheck, resolveAccountId, normalizeAccountName } from './accounts';
 import { getEntityOptions, getEntityOptionsForDuplicateCheck } from './entity-list';
 import { normalizeNameForCompare } from './name-utils';
@@ -101,10 +109,11 @@ export async function getInvoicesForListFirstPaint(): Promise<Invoice[]> {
   for (const r of rows) {
     if (r.entity_id) {
       const resolvedId = resolveEntity(r.entity_id);
-      if (!r.entities || r.entities.id !== resolvedId) needResolved.add(resolvedId);
+      const joinedId = mapJoinedEntityRow(r.entities)?.id;
+      if (joinedId !== resolvedId) needResolved.add(resolvedId);
     }
   }
-  const resolvedEntityCache = new Map<string, Awaited<ReturnType<typeof getEntityById>>>();
+  const resolvedEntityCache = new Map<string, NonNullable<Awaited<ReturnType<typeof getEntityById>>>>();
   if (needResolved.size > 0) {
     await Promise.all(Array.from(needResolved).map(async (id) => {
       const e = await getEntityById(id);
@@ -113,14 +122,14 @@ export async function getInvoicesForListFirstPaint(): Promise<Invoice[]> {
   }
   return rows.map((r: any) => {
     const resolvedEntityId = r.entity_id ? resolveEntity(r.entity_id) : null;
-    const entityRow = (resolvedEntityId ? resolvedEntityCache.get(resolvedEntityId) : null) ?? r.entities;
-    const customerName = r.customer_name || entityRow?.name || '';
+    const entity = pickResolvedEntityForList(resolvedEntityId, resolvedEntityCache, r.entities);
+    const customerName = r.customer_name || entity?.name || '';
     return {
     id: r.id,
     spaceId: r.space_id,
     customerName,
-    entityId: r.entity_id ?? undefined,
-    entity: entityRow ? mapEntityRow(entityRow) : undefined,
+    entityId: resolvedEntityId ?? undefined,
+    entity,
     totalAmount: Number(r.total_amount),
     currency: r.currency ?? undefined,
     tax: r.tax != null ? Number(r.tax) : undefined,
@@ -185,7 +194,8 @@ export async function getAllInvoicesForList(): Promise<Invoice[]> {
   for (const r of rows) {
     if (r.entity_id) {
       const resolvedId = resolve(entityMergeMap, r.entity_id);
-      if (!r.entities || r.entities.id !== resolvedId) needEntity.add(resolvedId);
+      const joinedId = mapJoinedEntityRow(r.entities)?.id;
+      if (joinedId !== resolvedId) needEntity.add(resolvedId);
     }
     if (r.account_id) {
       const resolvedId = resolve(accountMergeMap, r.account_id);
@@ -195,10 +205,10 @@ export async function getAllInvoicesForList(): Promise<Invoice[]> {
 
   const [entityCache, accountCache] = await Promise.all([
     needEntity.size > 0 ? (async () => {
-      const m = new Map<string, Awaited<ReturnType<typeof getEntityById>>>();
+      const m = new Map<string, NonNullable<Awaited<ReturnType<typeof getEntityById>>>>();
       await Promise.all(Array.from(needEntity).map(async (id) => { const e = await getEntityById(id); if (e) m.set(id, e); }));
       return m;
-    })() : Promise.resolve(new Map()),
+    })() : Promise.resolve(new Map<string, NonNullable<Awaited<ReturnType<typeof getEntityById>>>>()),
     needAccount.size > 0 ? (async () => {
       const m = new Map<string, Awaited<ReturnType<typeof getAccountById>>>();
       await Promise.all(Array.from(needAccount).map(async (id) => { const a = await getAccountById(id); if (a) m.set(id, a); }));
@@ -210,10 +220,9 @@ export async function getAllInvoicesForList(): Promise<Invoice[]> {
     const rc = { ...r };
     if (r.entity_id) {
       const resolvedId = resolve(entityMergeMap, r.entity_id);
-      if (!r.entities || r.entities.id !== resolvedId) {
-        const e = entityCache.get(resolvedId);
-        rc.entities = e ? { id: e.id, space_id: e.spaceId, name: e.name, tax_number: e.taxNumber, phone: e.phone, address: e.address, is_ai_recognized: e.isAiRecognized, merged_into_id: e.mergedIntoId, created_at: e.createdAt, updated_at: e.updatedAt } : undefined;
-      }
+      const entity = pickResolvedEntityForList(resolvedId, entityCache, r.entities);
+      rc.entity_id = resolvedId;
+      rc.entities = entity;
     }
     if (r.account_id) {
       const resolvedId = resolve(accountMergeMap, r.account_id);

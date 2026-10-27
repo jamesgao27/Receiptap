@@ -8,6 +8,278 @@
 
 ---
 
+### 2026-10-03（Adaven-CRM：Wholestore 客户查询 Edge Function 非 2xx）
+
+**User（提示词/原意）**  
+- adaven-crm 中查询 wholestore 的客户数据，提示 Edge Function returned a non-2xx status code。其他应用没有出现。
+
+**Assistant（实现前说明）**  
+- 客户页通过 Hub `product-ops` 的 `list_tenants` + `list_orders` 拉数据。先核对 Wholestore 适配密钥和表结构，再对比其他产品的 PostgREST 暴露 schema。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 空间表能读（3 个 space）。失败点是 `crm.space_orders` / `crm.sku_edition`：PostgREST 只暴露了 `public, graphql_public, provider, consumer`，`authenticator` 对 `crm` 没有 USAGE。客户页并行拉订单，于是整页变成 Edge Function 非 2xx。Vouchap / Portalflow 已暴露 `crm`，所以只有 Wholestore 中招。  
+- 已在项目 `foyecolycmxcneflpant` 授权并设置 `pgrst.db_schemas` 含 `crm`，迁移 `20261004034500_expose_crm_postgrest.sql` 已 `db push`。复查：spaces 3、orders 4、sku 5。刷新 CRM 再选 Wholestore 即可。未改 CRM 前端，未 commit。
+
+**关联**  
+- `Adaven-platform/packages/db-platform/sql/038_expose_crm_postgrest.sql`  
+- `Adaven-platform/apps/wholestore-app/supabase/migrations/20261004034500_expose_crm_postgrest.sql`  
+- `Adaven-CRM/supabase/functions/product-ops/index.ts`（`list_orders` 走 `crm` schema）
+
+---
+
+### 2026-10-03（Firedoor：中断提交并重新推送）
+
+**User（提示词/原意）**  
+- 中断现在的 commit，重新 push。
+
+**Assistant（实现前说明）**  
+- 先查是否有进行中的 `git commit` 或 `index.lock`。没有的话，把未提交的二十层对局重新提交并推 `main`。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 没有卡住的提交。新提交 `5b27427` 已推到 https://github.com/jamesgao27/Firedoor 的 `main`。
+
+**关联**  
+- `/Users/macbook/Firedoor`
+
+---
+
+### 2026-10-03（Firedoor：二十层下楼）
+
+**User（提示词/原意）**  
+- 游戏名「火已封门」。二十层大楼起火，从 20 楼沿 Z 字形楼梯跑到 1 楼。木门挡 5 秒、每 3 秒一扇；铁门永久挡火，每扇每秒 2 金币。开局 30 金币，每 5 秒 +10。金币归零或被火烧到即输。上键木门，下键铁门，左右下楼。火在进入楼梯间 10 秒后追来，而且比人快。表述不通顺的由助手理顺。
+
+**Assistant（实现前说明）**  
+- 做成一局实时规则，放在 `/play`。楼梯 19 段，偶数层往右、奇数层往左。下楼每段 2 秒，火每段 0.55 秒。不改账号表。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 模拟：不装门会在约 14 层被追上；只装一扇铁门能到 1 楼且金币还有剩余；连装三扇铁门会在 9 秒金币归零；见缝插针装木门也能赢。
+- 浏览器里核对了 `/play`：按错方向会提示往右，铁门提示每秒 2 金币，下楼后下一段改往左；停在 20 楼会被火追上。首页有「开始逃生」。尚未推送到 GitHub，线上仍是旧页面。
+
+**关联**  
+- `/Users/macbook/Firedoor/src/lib/escape-run.ts`
+- `/Users/macbook/Firedoor/src/app/play/play-view.tsx`
+
+---
+
+### 2026-10-03（Firedoor：推送 GitHub 并触发 Vercel）
+
+**User（提示词/原意）**  
+- 代码上传 GitHub，并自动触发 Vercel 构建发布。
+
+**Assistant（实现前说明）**  
+- 本地已有提交，远程为空。计划提交用户名密码改动，建私有仓库 `jamesgao27/Firedoor` 并推送 `main`，再用 `vercel git connect` 接到现有项目。不提交 `.env.local`。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 已推送 https://github.com/jamesgao27/Firedoor （私有）。Vercel 项目已连接该仓库，之后推 `main` 会自动构建。
+- 连接发生在第一次推送之后，因此用该提交 `97e93ba` 补了一次生产部署。https://firedoor-psi.vercel.app/register 已是用户名密码，没有邮箱和验证码。
+
+**关联**  
+- https://github.com/jamesgao27/Firedoor
+- https://firedoor-psi.vercel.app
+
+---
+
+### 2026-10-03（Firedoor：登录后提交账号表 SQL）
+
+**User（提示词/原意）**  
+- 系统通知：CloudBase 设备登录任务已完成。接着提交账号表。
+
+**Assistant（实现前说明）**  
+- 无代码变更。登录已成功。把 `002_username_accounts.sql` 拆成单条语句，用 `tcb db execute` 提交到 `firedoor-d1ggpyujx33d902f6`。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 20 条语句全部执行成功。用网页同一把 Publishable Key 调 `register_player`：注册成功、当前会话能读到用户名、重复注册返回「用户名已被占用」、注销后会话失效。测试账号 `doorcheck` 已删除。
+- 线上 Vercel 仍是旧的邮箱注册，这次没有重新部署。
+
+**关联**  
+- `/Users/macbook/Firedoor/cloudbase/migrations/002_username_accounts.sql`
+
+---
+
+### 2026-10-03（Firedoor：发起 CloudBase CLI 登录）
+
+**User（提示词/原意）**  
+- 你来执行，我授权就是了。
+
+**Assistant（实现前说明）**  
+- 无代码变更。用 `tcb login --flow device` 发起设备授权，授权成功后再执行 `002_username_accounts.sql`。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 登录进程已启动，授权页为 `https://tcb.cloud.tencent.com/dev#/cli-auth?user_code=R5V2-9TDY&from=cli&flow=device`。SQL 尚未提交，等用户在浏览器确认。
+
+**关联**  
+- 环境 `firedoor-d1ggpyujx33d902f6`
+
+---
+
+### 2026-10-03（Firedoor：CloudBase CLI 能否直接提交 SQL）
+
+**User（提示词/原意）**  
+- CloudBase 有 CLI 么？你可直接提交处理么？
+
+**Assistant（实现前说明）**  
+- 无代码变更。查本机是否已有 CLI 与登录态，以及 PostgreSQL 环境能否用 CLI 执行 SQL。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 有 CLI：`@cloudbase/cli` 3.8.5，命令 `tcb` / `cloudbase`。`tcb db execute` 与 `tcb db pg migration up` 可对 PostgreSQL 环境执行 SQL，但必须是管理员登录。
+- 本机执行 `tcb env list` 返回未登录。Publishable Key 不能跑 DDL。因此这次没有把 `002_username_accounts.sql` 提交上去。
+
+**关联**  
+- `/Users/macbook/Firedoor/cloudbase/migrations/002_username_accounts.sql`
+
+---
+
+### 2026-10-03（Firedoor：用户名密码注册）
+
+**User（提示词/原意）**  
+- 初试注册通过用户名和密码即可，不用邮箱认证，降低用户门槛。
+
+**Assistant（实现前说明）**  
+- CloudBase `/auth/v1/signup` 实测拒绝「仅用户名+密码」，邮箱注册也要求验证码。计划改为在 Postgres 建 `players` / `player_sessions`，页面只收用户名和密码，去掉邮箱与 `/activate` 验证码。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 注册、登录、门厅已改为用户名和密码。密码 bcrypt 存在服务端，会话令牌只回传一次。`/activate` 转到注册页。
+- 本地 http://localhost:3010/register 已核对：无邮箱字段；短密码当场提示；合法提交返回「请执行 002_username_accounts.sql」。账号表尚未在 CloudBase 执行，所以还不能真正注册成功。线上 Vercel 仍是旧的邮箱流程，未重新部署。
+
+**关联**  
+- `/Users/macbook/Firedoor/cloudbase/migrations/002_username_accounts.sql`
+
+---
+
+### 2026-10-03（Firedoor：本地开发服务中断）
+
+**User（提示词/原意）**  
+- 系统通知：本地任务「Restart Firedoor on Singapore region」已中止。
+
+**Assistant（实现前说明）**  
+- 无代码变更。核对终端记录，确认是否影响已发布站点。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- `npm run dev -- --port 3010` 在运行约 7 分钟后被中止，退出前首页与激活页均为 200。线上 https://firedoor-psi.vercel.app 不依赖该进程。
+
+**关联**  
+- `/Users/macbook/Firedoor`
+
+---
+
+### 2026-10-03（Firedoor：代建并发布 Vercel）
+
+**User（提示词/原意）**  
+- 你来操作就好了（指在 Vercel 上创建项目并发布）。
+
+**Assistant（实现前说明）**  
+- 用已登录的 Vercel CLI 在团队 james-projects 创建 firedoor 并生产部署。不提交 git。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 已发布 https://firedoor-psi.vercel.app ，首页含「火已封门」。三项 CloudBase 环境变量已写入 Vercel。`vercel link` 曾覆盖 `.env.local`，已恢复。关部署保护并重部署后公开可访问。CloudBase 安全域名仍需加上该地址。
+
+**关联**  
+- `/Users/macbook/Firedoor`，https://firedoor-psi.vercel.app
+
+---
+
+### 2026-10-03（Firedoor：生产站点公开访问）
+
+**User（提示词/原意）**  
+- 修好 Firedoor 的 Vercel 生产部署：关掉 SSO/部署保护，框架设为 nextjs，确保 `firedoor-psi.vercel.app` 指向当前生产部署，访客无需 Vercel 登录即可打开，页面含「火已封门」。不要打印密钥，不要 `vercel env pull` / `vercel link`，不要提交 git。
+
+**Assistant（实现前说明）**  
+- 无 Firedoor 代码变更。先读项目与域名：framework 为空，ssoProtection 为 `all_except_custom_domains`，域名 `firedoor-psi.vercel.app` 已登记且别名指向 `dpl_FJpwwQ1t4kGRVfNbDwk8SsBGxx1m`。拟 PATCH 关闭保护并设 framework，若仍 404 再 `vercel deploy --prod`。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- framework 设为 `nextjs`；`ssoProtection` 与 `passwordProtection` 设为 null。关保护后旧部署三个地址均为边缘 404，已重新生产部署 `dpl_HSy68kucyiVfv2Rbrwpzpr7hhHXa`，别名重新挂上。
+- `https://firedoor-psi.vercel.app` 与团队别名均为 HTTP 200，HTML 含「火已封门」，无 SSO 跳转。未改环境变量，未提交 git。
+
+**关联**  
+- `/Users/macbook/Firedoor`，项目 `prj_aSMRbEyLrORV0Pp3wFMtKxEEp2lM`
+
+---
+
+### 2026-10-03（Firedoor：Vercel 是否需自建）
+
+**User（提示词/原意）**  
+- Vercel 上是不是需我自建项目？
+
+**Assistant（实现前说明）**  
+- 无代码变更。核对本地是否已有 git remote 或 `.vercel`。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 需要。Firedoor 只在本地，`main` 没有远程，也没有 `.vercel`。Vercel 项目要在控制台导入仓库，或登录后用 CLI 创建。环境变量不会随代码上去，需在 Vercel 单独填写三个 `NEXT_PUBLIC_CLOUDBASE_*`。
+
+**关联**  
+- `/Users/macbook/Firedoor`
+
+---
+
+### 2026-10-03（Firedoor：地域改为新加坡）
+
+**User（提示词/原意）**  
+- CloudBase 选择的区域是新加坡。
+
+**Assistant（实现前说明）**  
+- 本地原先写的是 `ap-shanghai`。先探测网关：上海入口返回环境创建在 `ap-singapore`、不能从上海访问；新加坡入口能接到这个环境。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- `.env.local`、示例和代码默认地域改为 `ap-singapore`，并重启了 3010 开发服务。
+- 用测试邮箱再提交注册，已进入「查收验证码」页，说明请求打到新加坡环境。测试邮箱收不到信，正式注册要用真实邮箱。邮箱登录若仍未配置发信，验证码仍可能发不出。
+
+**关联**  
+- `/Users/macbook/Firedoor/.env.local`、`src/lib/cloudbase.ts`
+
+---
+
+### 2026-10-03（Firedoor：写入 Publishable Key）
+
+**User（提示词/原意）**  
+- 提供 CloudBase Publishable Key，要求写入 Firedoor。
+
+**Assistant（实现前说明）**  
+- 密钥是前端 anon Publishable Key，写入 `.env.local` 的 `NEXT_PUBLIC_CLOUDBASE_ACCESS_KEY`，重启 3010 上的开发服务后再试注册。不把密钥原文写入日志。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 密钥已写入并重启。用测试邮箱提交注册，CloudBase 已连通，返回 `provider email not found`：邮箱登录方式尚未在控制台开启。页面已把这条英文错误改成中文提示。
+- 下一步：控制台开启邮箱登录并配置发信，安全域名放行 `http://localhost:3010`，SQL 执行 `001_profiles.sql`。
+
+**关联**  
+- `/Users/macbook/Firedoor/.env.local`、`src/lib/cloudbase.ts`
+
+---
+
+### 2026-10-03（Firedoor：写入 CloudBase 环境 ID）
+
+**User（提示词/原意）**  
+- CloudBase 已创建项目，环境 ID 是 `firedoor-d1ggpyujx33d902f6`。
+
+**Assistant（实现前说明）**  
+- 把环境 ID 写入 Firedoor 的 `.env.local`。Publishable Key 不能从环境 ID 推导，本机也没有 CloudBase CLI 登录态。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 已写入 `NEXT_PUBLIC_CLOUDBASE_ENV_ID`，地域保持 `ap-shanghai`。`NEXT_PUBLIC_CLOUDBASE_ACCESS_KEY` 仍为空，注册发信还不能通。
+- 需要在云开发控制台该环境的 API Key 管理里创建 Publishable Key（`publish_key`），填进 `.env.local` 后重启 `npm run dev`。
+
+**关联**  
+- `/Users/macbook/Firedoor/.env.local`
+
+---
+
+### 2026-10-03（独立项目 Firedoor：注册激活外壳）
+
+**User（提示词/原意）**  
+- 新建网页游戏 Firedoor，火灾逃脱通关策略，剧情稍后。先搭注册激活和火灾元素 UI，前端 Vercel。界面改为全中文。后端用腾讯云开发 CloudBase for Supabase 版。随后「继续」按该计划实现。
+
+**Assistant（实现前说明）**  
+- 新目录 `/Users/macbook/Firedoor`，不放进 Vouchap。Next.js App Router + Tailwind。客户端用 `@cloudbase/js-sdk`：`signUp` 发邮箱验证码，`verifyOtp` 激活，`signInWithPassword` 登录。`profiles` SQL 供控制台执行。不写关卡。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 已建落地页、注册、激活、登录、门厅、错误页，文案全中文。门厅未登录会回登录；没有待激活信息会回注册。密码 8–32 位且含字母和数字。未配置环境时注册会提示填写 `.env.local`。
+- 验证：`tsc --noEmit` 与 `eslint src` 通过。浏览器走通 `/`、`/register`（空表单、短密码、缺配置）、`/lobby`→`/login`、`/activate`→`/register`、`/error`。真实发信要等 CloudBase 环境 ID 与 Publishable Key。
+- 限制：刷新激活页会丢掉内存中的验证回调，需点「重新获取验证码」。未部署 Vercel，未建云环境。
+
+**关联**  
+- `/Users/macbook/Firedoor`（独立仓库，不纳入 Vouchap PRD）
+
+---
+
 ### 2026-09-07（回归：右栏不加载历史记录 — restorePromptFromLog TDZ）
 
 **User（提示词/原意）**  
@@ -9614,3 +9886,1442 @@
 - `vouchap-app/src/shared-logic/supabase-paging.ts`（新增）
 - `vouchap-app/src/shared-logic/database.ts`
 - `Adaven-platform/apps/portalflow-app/src/shared-logic/`（同步）
+
+---
+
+### 2026-09-17（CRM 给 Portalflow space 建单：Edge Function non-2xx）
+
+**User（提示词/原意）**  
+- CRM 上给 Portalflow 的 space 创建订单，提示 `Edge Function returned a non-2xx status code`。
+
+**Assistant（实现前说明）**  
+- Hub `product-ops` 用各产品 **service_role** 写 `crm.space_orders`。Vouchap 已补过 GRANT；Portalflow 历史 SQL 只把 INSERT/UPDATE 给了 `authenticated`。  
+- 前端 `functions.invoke` 遇到非 2xx 只抛这句泛化错误，需同时把函数 JSON `error` 透出。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 已在 Portalflow 库 `xvqlqvtfogxkfeillvig` 授予 `service_role` 对 `crm.space_orders` 的 SELECT/INSERT/UPDATE（迁移 `20260917180000_grant_hub_service_role_space_orders.sql`，并写入 `schema_migrations`）。  
+- CRM `hub-api.ts` 解析 Edge Function 错误体，避免只显示 non-2xx。  
+- 残留：Portalflow `get_space_entitlements` 在 `auth.uid()` 为空时返回 `UNAUTHORIZED`，Hub 点「权益」可能仍看不到真实快照（与建单无关）。未 git commit。
+
+**关联**  
+- `Adaven-platform/apps/portalflow-app/supabase/migrations/20260917180000_grant_hub_service_role_space_orders.sql`  
+- `Adaven-CRM/src/lib/hub-api.ts`、`sql/grant-portalflow-service-role-for-hub.sql`
+
+---
+
+### 2026-09-17（Portalflow 已开通订阅仍 Failed to load expenses / 不能 AI 识别）
+
+**User（提示词/原意）**  
+- 给 Portalflow 的 space 添加了订阅订单后，客户侧仍然不正常：failed to load expenses，也不能 AI 识别。
+
+**Assistant（实现前说明）**  
+- 查 live 库：space `Gao` 为 `consumer`，CRM 已写入 `CLIENT_PAID_MONTHLY`，但 SKU `space_target=client`，`_active_space_subscription_row` 要求 `space_target IN (kind)`，永远匹配不上。  
+- expenses 列表 select `account_id` / `input_type` / embed `accounts`，库仍是 `payment_accounts` + `receipts.payment_account_id`。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 已推 `20260917190000_fix_subscription_space_target_and_accounts.sql` 到 **仅** `xvqlqvtfogxkfeillvig`：SKU space_target firm/client → provider/consumer；订阅匹配兼容旧词；`payment_accounts`→`accounts`，`receipts.account_id` + `input_type`。  
+- 验证：`_active_space_subscription_row(Gao)` 现返回 `CLIENT_PAID_MONTHLY` 至 2030-12-31。  
+- 请刷新 Portalflow 后再开 Expenses / 识别。未 git commit。未部署 Web。
+
+**关联**  
+- `Adaven-platform/apps/portalflow-app/supabase/migrations/20260917190000_fix_subscription_space_target_and_accounts.sql`
+
+---
+
+### 2026-09-17（Portalflow 新 Firm 的 Service Catalog preset 从哪来；名称与封面为何不对）
+
+**User（提示词/原意）**  
+- Portalflow 注册新 Firm 时，预设 Service Catalog 的 preset 数据如何从 Vouchap 库迁过来？人工看 template_items 有迁移，但 template 名词没迁正确，封面图片没有迁移。
+
+**Assistant（实现前说明）**  
+- 无代码变更。对照两边 live 库 `crm.preset_templates` / `preset_template_items`，以及新建 Firm 时 `apply_preset_skus_to_provider` 的复制路径。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- **没有从 Vouchap live 库 dump 过来。** Portalflow 空库 `db push` 只重放了仓库里的 seed 迁移（`20250224230000_seed_preset_skus.sql` + `20250224250000_seed_preset_skus_en.sql`）。APPLY.md 明确不导入 Vouchap storage。  
+- 新建 Firm：`create_space_with_user` → `provider.apply_preset_skus_to_provider`（客户端 `registerOnSpaceCreated` 再兜底一次）。函数把 Portalflow 自己的 `crm.preset_templates`（name/description/**image_url**）+ items 拷到 `provider.skus` / `sku_items`。源表没图、名称是 seed，新 Firm 就会一样。  
+- 两边 items 条数与标题一致（zh T1 都是 22 条，含「P1: 基础准入」等），所以看起来像「items 迁过来了」——其实是同一份 seed。  
+- Vouchap live 后来在库里改了名称（去掉 2025、中文名）并上传了 `marketplace` 封面；这些改动从未进迁移、也从未同步到 Portalflow。Portalflow 8 条 `image_url` 全空；Vouchap 指向 `giuacjbfsyrristkigmz.../marketplace/IMG_20260228_*.png`。  
+- 已有 Firm 不会自动重套 preset（函数见已有 skus 即 return）。要对齐需：1）把 Vouchap 的 name/description 写进 Portalflow `crm.preset_templates`；2）把 8 张图拷进 Portalflow `marketplace` bucket 并写新 URL；3）新 Firm 之后才会带上；旧 Firm 要另补。
+
+**关联**  
+- `apps/portalflow-app/supabase/migrations/20250224230000_seed_preset_skus.sql`  
+- `apps/portalflow-app/src/shared-logic/portalflow-space-bootstrap.ts`、`firm.ts` `applyPresetSkusToFirm`  
+
+---
+
+### 2026-09-17（Portalflow preset_templates 对齐 Vouchap live：名称 + 封面）
+
+**User（提示词/原意）**  
+- 直接处理好；Vouchap 上的 preset_template 已精细调整，Portalflow 需直接复用。只动 preset 数据。
+
+**Assistant（实现前说明）**  
+- 只改 Portalflow `crm.preset_templates` / `crm.preset_template_labels` 与 Storage `marketplace`，不改 `provider.skus`。按 locale + sort_order 对齐 name/description/tax + 封面 URL。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 8 张封面从 Vouchap public marketplace 下载后上传到 Portalflow `marketplace/`（同文件名，public URL 200）。  
+- 已应用 `20260917200000_sync_preset_templates_from_vouchap.sql`：名称与 Vouchap live 一致（含中文名、去掉 2025）；写入 tax_country/scenario 及对应 label；`image_url` 指向 Portalflow 自己的 bucket。已记 `schema_migrations`。  
+- 验证：8 行 `has_image`/`pf_img` 均为 true。现有 Firm 的 8 条 `provider.skus` 仍是 seed 名、无图（按「只动 preset」未改）。**新注册 Firm** 会带上新名称和封面。  
+- 未 git commit。未部署 Web。
+
+**关联**  
+- `Adaven-platform/apps/portalflow-app/supabase/migrations/20260917200000_sync_preset_templates_from_vouchap.sql`  
+- `apps/portalflow-app/supabase/APPLY.md`  
+
+---
+
+### 2026-10-11（Workmap：新增 Flowchart 地图）
+
+**User（提示词/原意）**  
+- workmap 增加流程图：创建按钮浮窗在 Mind map 与 Flowchart 之间选择，图标用 `flowchart-file`。交互对齐 antbim Web 的 Process Map：画布拖拽创建并定义起止时间，任务名用 `@`，连线支持 FS/FF/SS/SF 和自由工时（如 FS+3），以及排期、仅排序两种视图。
+
+**Assistant（实现前说明）**  
+- 不依赖私有库 `ant-tcn`，也不把条目写成项目任务。在 `workmap.mind_maps` 增加 `map_kind`，流程图 JSON 写入已有的 `process_map_document`。画布、排期推移和 `@` 提及做在 Workmap 自己的编辑器里。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 已加迁移 `20261011120000_workmap_mind_maps_map_kind.sql`，并 `supabase db push` 到已链接库。创建按钮弹出 Mind map / Flowchart；树和最近列表按类型换图标。  
+- Flowchart 支持拖拽起止、平移拉伸、连线 FS/FF/SS/SF 与滞后、后序推移、Schedule / Order only。`@` 与思维导图共用光标和锚点逻辑。  
+- 浏览器里核对：拖出条目、`@` 选中 Alex Chen、连线后把滞后改成 3，后序被推到工时 8（`FS+3`）；切到 Order only 后按依赖分成两列。未登录，因此没有在真实工作区列表里点创建浮窗。`tsc --noEmit` 通过。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+- `/Users/macbook/Workmap/apps/web/src/lib/flowchart-document.ts`  
+- `/Users/macbook/Workmap/supabase/migrations/20261011120000_workmap_mind_maps_map_kind.sql`  
+
+---
+
+### 2026-10-11（Workmap：同一张地图切换 Mind map 与 Flowchart）
+
+**User（提示词/原意）**  
+- AI Work Map 要能创建两种地图。聊天提交按钮里选择 AI 生成 Mind map 还是 Flowchart。同一条记录要能在两种视图间切换：思维导图是父子关系，流程图是前后序关系。  
+- 更正：section 仍保留。流程图里新增的条目挂到第一个 section 之下，不挂到根上。
+
+**Assistant（实现前说明）**  
+- `map_kind` 只表示当前视图。父子留在 `mind_map_document`，前后序留在 `process_map_document`，任务共用 id。切换时只补缺失任务，不把一种关系改写成另一种。空的 `{}` 思维导图不套用带示例任务的默认模板，而是根 + `Section 1`。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 对齐在 `map-view-align.ts`：section 不进流程图；流程图多出来的条目挂到第一个 section（没有 section 时先建 `Section 1`）；删任务时两边一起去掉该 id。脚本核对了空文档、已有 section、父子不生成连线、连线不生成父子。  
+- 聊天提交按钮在按钮上方弹出 Mind map / Flowchart，选中后立刻生成并打开。Enter 沿用上次类型，默认 Mind map。生成思维导图后，只把 section 下的任务种成无连线、时长为 1 的流程图条目。  
+- Edge Function 新增 `generate_flowchart`（条目、工时、FS/FF/SS/SF 与 lag），已部署到 `ychcuxqggqceaodhoutv`。客户端赋 id，写成流程图，并写一棵「根 + Section 1 + 全部任务」的思维导图。AI 版本快照仍写入 `mind_map_ai_versions`：`outline_text` 记条目和连线，`mind_map_document` 记带 section 的树。  
+- 打开的地图标题栏可切换两种视图，写回两份 JSON 和 `map_kind`。侧栏图标跟随 `map_kind`。  
+- `tsc --noEmit` 通过。浏览器打开 `/app/work-map` 被转到登录页，没有在已登录工作区里点提交浮窗和标题栏切换。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/lib/map-view-align.ts`  
+- `/Users/macbook/Workmap/apps/web/src/pages/WorkMapPage.tsx`  
+- `/Users/macbook/Workmap/supabase/functions/workmap-ai/index.ts`  
+
+---
+
+### 2026-10-11（Workmap：思维导图与流程图共用起止时间）
+
+**User（提示词/原意）**  
+- 两种图的数据应是同一套，方便以后兼容。至少条目里的起止时间要共用。思维导图里只有一个时间时，那是完成时间；流程图里完成时间确定，时长默认 1。流程图里拖拉出来的条目，切回思维导图应有两个时间。
+
+**Assistant（实现前说明）**  
+- 不把父子改成前后序。时间单独对齐：思维导图的 `#` 日期和流程图的工时列用同一条时间轴，`originDate` 是工时 0 对应的日期。一个日期是完成日，时长 1；跨越多列的条目写成开始日和完成日。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 思维导图任务若只有 `#完成日`（可带时刻），流程图条目占该日 1 个工时，右端就是完成日。若有开始和完成两个日期，条目覆盖这两个日期之间的整天。  
+- 流程图里拖出超过 1 个工时的条目，切回思维导图会写成两个 `#` 日期：开始日和最后一天（完成日）。只有 1 个工时、且不在第 0 列的条目，写成一个完成日。从未排期、停在第 0 列且时长为 1 的任务不自动补日期。已有时刻会留在同一天上。  
+- 任务标题和 `@` 仍共用；日期只写在思维导图标签上，流程图条形用起止工时表达同一段时间。section、父子和连线规则不变。  
+- 脚本核对了单日往返、跨度往返、未排期任务不造日期。`tsc --noEmit` 通过。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/lib/map-view-align.ts`  
+- `/Users/macbook/Workmap/apps/web/src/lib/flowchart-document.ts`  
+
+---
+
+### 2026-10-11（Workmap：流程图排期横轴改为时间，并加横向缩放标尺）
+
+**User（提示词/原意）**  
+- 两种图的解析数据整合成同一套。Flowchart 的 Schedule 视图横向应是时间坐标。增加与思维导图一样的缩放标尺，但只缩放横向。磁吸颗粒包括时、日、周、月、季。
+
+**Assistant（实现前说明）**  
+- 起止时间改成从 `originDate` 00:00 起算的分钟，并写入 `timeScale: 'calendar'`。旧文档没有该标记时，start/end 仍按「天」读入，乘 1440。连线滞后仍是天数（FS+3 = 3 天）。标尺只改横向像素和磁吸粒度，泳道高度不变。Order only 不是时间轴，不显示标尺。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- Schedule 横轴按真实时间画刻度，不再用 0、1、2 这种列号。标尺从左到右是 Quarter、Month、Week、Day、Hour；拖动或点刻度会吸到最近一档，加减号逐档切换，标签显示档名。拖拽创建、移动、拉伸都按当前粒度磁吸，最短一段是一个颗粒。  
+- 思维导图只有日期时，条目占那一整天。日期带时刻时，完成时刻确定，时长 1 小时。两个纯日期仍是开始日到完成日（含完成日）。未排期、停在原点且正好一天的条目不补日期。旧的「天」数据在读入时换成分钟，保存后带 `timeScale: 'calendar'`，下次不会再乘一次。  
+- 脚本核对了时刻往返、跨天往返、旧数据换算、FS+3 仍是 3 天，以及周/月/季边界。`tsc --noEmit` 通过。浏览器打开 `/app/work-map` 被转到登录页，没有在已登录画布上拖标尺。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/lib/schedule-time.ts`  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+- `/Users/macbook/Workmap/apps/web/src/lib/map-view-align.ts`  
+
+---
+
+### 2026-10-11（Workmap：一份 JSON，AI 同时生成父子和前后序）
+
+**User（提示词/原意）**  
+- JSON 数据整合成同一套，并清理数据库里的冗余表格和字段。AI 生成时不再区分两种图，而是让 AI 把父子关系和前后序关系都生成出来。
+
+**Assistant（实现前说明）**  
+- 一份 `mind_map_document` 同时放树、排期和连线。去掉 `process_map_document`。旧的 `workspace_project_maps` 草稿表先把行并进 `workmap.mind_maps`，再删表。AI 仍走 `generate_wbs`，但返回大纲加任务序号上的 FS/FF/SS/SF 连线，不再单独生成流程图。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 已执行迁移 `20261011143000_workmap_unified_map_document.sql`。`workmap.mind_maps` 只留 `mind_map_document`；`process_map_document` 已删。`public.workspace_project_maps` 已删，原草稿行以 `doc_id = draft-<id>` 进了思维导图列表。`map_kind` 仍表示上次打开的画布。  
+- 聊天提交不再弹出 Mind map / Flowchart。一次生成写出 section 下的任务，以及这些任务之间的前后序；`#` 日期仍是排期。滞后仍是天数。空白创建仍可选先打开哪一块画布，写的是同一份文件。  
+- 脚本核对了大纲父子、FS+3，以及打包后再读出连线和时长。`tsc --noEmit` 通过。Edge Function `workmap-ai` 已部署。未在已登录页面点过生成。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/lib/map-view-align.ts`  
+- `/Users/macbook/Workmap/supabase/migrations/20261011143000_workmap_unified_map_document.sql`  
+- `/Users/macbook/Workmap/supabase/functions/workmap-ai/index.ts`  
+
+---
+
+### 2026-10-11（Workmap：流程图条目行高与时间格）
+
+**User（提示词/原意）**  
+- 流程图画布里减小条目高度，与思维导图单行条目一致。条目在行内上下居中，横隔线落在条目间距中间。减小行高，竖向间距与思维导图 100% 缩放时一样。竖隔线是区间隔线，一格表示当前比例的一个单位，并体现周末日期的底色差异。
+
+**Assistant（实现前说明）**  
+- 思维导图任务节点在 100% 时高 36px，左右布局的相邻条目竖向间距是 14px。行高改为 50px，条目在行内居中，横线画在两行交界。竖线按当前粒度的每个边界画，不再合并多格。周六和周日铺浅底。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 条目高 36px，行高 50px，上下各留 7px，横隔线在这 14px 间距的正中。字体与思维导图单行条目同为 0.8rem。  
+- 时、日、周、月、季每一档都是一格一个单位，竖线落在该单位的边界上。周末按日历日铺底，日视图里整列着色，更粗的粒度里只铺周六日那一段。  
+- 脚本核对了 2026-10-11 起连续 8 天的周末区间，以及日视图每格一天。`tsc --noEmit` 通过。未在已登录画布上目视。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+- `/Users/macbook/Workmap/apps/web/src/styles/flowchart-editor.scss`  
+- `/Users/macbook/Workmap/apps/web/src/lib/schedule-time.ts`  
+
+---
+
+### 2026-10-11（Workmap：流程图隔线改轻，时间标居中）
+
+**User（提示词/原意）**  
+- 隔线过重。时间标应放在格子的横向居中。
+
+**Assistant（实现前说明）**  
+- 横线和竖线的不透明度从 0.45 降到 0.2。时间文字改到当前格子起止时刻的中点，并用 translateX(-50%) 居中。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- Schedule 与 Order only 的隔线都改为更淡的 1px。时间标按当前粒度的一整格居中，月和季按实际边界取中点。未在已登录画布上目视。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+- `/Users/macbook/Workmap/apps/web/src/styles/flowchart-editor.scss`  
+
+---
+
+### 2026-10-11（Workmap：月、季取消周末底色）
+
+**User（提示词/原意）**  
+- 取消月、季比例的周末底色。
+
+**Assistant（实现前说明）**  
+- 周末底色只在时、日、周粒度绘制。月和季一格跨很多天，不再铺周六日底。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- `timeGrain` 为 month 或 quarter 时不调用 `weekendRanges`。时、日、周仍按日历日铺周末底。未在已登录画布上目视。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+
+---
+
+### 2026-10-11（Workmap：时比例一屏约两天）
+
+**User（提示词/原意）**  
+- 时比例时，画布横向显示跨度应为 2 天较好。
+
+**Assistant（实现前说明）**  
+- 小时刻度原先每格 72px，一屏大约不到一天。改为按可视宽度计算，让一屏横向刚好约两天。格子仍是一小时一格；格子变窄时只保留部分时间标，避免叠字。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- Hour 的每分钟像素 =（可视宽度 − 左边距）/（2 × 1440）。窗口变宽时仍保持约两天。小时格窄于 44px 时每 3 小时标一次，窄于 28px 时每 6 小时标一次，午夜日期仍显示。竖线仍按小时。未在已登录画布上目视。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+
+---
+
+### 2026-10-11（Workmap：时间轴两行，无级缩放）
+
+**User（提示词/原意）**  
+- 流程图时间坐标轴有必要设计成两行：年/季，年/月，年/周n，年月/日，年月日/时。缩放需支持跟思维导图一样无级滚动缩放，在四个区间内合适的比例时切换颗粒显示。
+
+**Assistant（实现前说明）**  
+- 标尺改为对数连续缩放，滚轮与拖动手柄都无级。季、月、周、日、时五个锚点之间有四个区间，格子宽到能读时才切到更细的颗粒。坐标轴拆成上行大段、下行当前格。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 上行：季/月/周为年，日为年月，时为年月日。下行格子居中：Q1、Jan、W12、日号、小时。滚轮以指针处的时间为锚缩放，只改变横向。最右端仍约两天一屏。切到小时后窄格仍每 3 或 6 小时标一次。`timePx` 随文件保存。`tsc --noEmit` 通过。未在已登录画布上目视。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+- `/Users/macbook/Workmap/apps/web/src/lib/schedule-time.ts`  
+- `/Users/macbook/Workmap/apps/web/src/styles/flowchart-editor.scss`  
+
+---
+
+### 2026-10-11（Workmap：两种画布的滚轮手势）
+
+**User（提示词/原意）**  
+- 两种视图下，鼠标正常滚动等于上下平移画布，滚轮加 Shift 等于左右平移，加 Ctrl 等于缩放。触控板双指平移画布，撑捏缩放。
+
+**Assistant（实现前说明）**  
+- 思维导图原先滚动即缩放。流程图上一轮也把滚轮绑成了时间轴缩放。改为滚动平移，只有 Ctrl 或触控板撑捏才缩放。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 思维导图：`zoomOnScroll` 关闭，`panOnScroll` 开启，撑捏与 Ctrl+滚轮仍缩放。流程图 Schedule 与 Order only：普通滚动上下移，Shift 或横向双指左右移，Ctrl 与撑捏只在 Schedule 缩放时间轴。`tsc --noEmit` 通过。未在已登录画布上目视。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/pages/mind-map/MindMapEditorPage.tsx`  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+
+---
+
+### 2026-10-11（Workmap：去掉页面滚动条）
+
+**User（提示词/原意）**  
+- 两种视图都出现了页面滚动条。不应出现页面级滚动条，且前述滚动只在鼠标位于画布内时激活。
+
+**Assistant（实现前说明）**  
+- 应用壳只用了最小高度，画布内容会把文档撑高，窗口因此出现滚动条。滚轮绑在画布节点上，指针在画布外时不应再带动页面。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- `html`、`body`、`#root` 和登录后的应用壳改为铺满视口并 `overflow: hidden`。思维导图画布容器裁切溢出。流程图滚动留在画布内部的滚动层，且 `overscroll-behavior: none`，不会串到页面。滚轮监听仍只挂在画布上。未在已登录画布上目视。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/index.css`  
+- `/Users/macbook/Workmap/apps/web/src/styles/aimlink-web-app-shell.scss`  
+- `/Users/macbook/Workmap/apps/web/src/styles/aimlink-web-mindmap-editor.scss`  
+- `/Users/macbook/Workmap/apps/web/src/styles/flowchart-editor.scss`  
+
+---
+
+### 2026-10-11（Workmap：框选与流程图放置光标）
+
+**User（提示词/原意）**  
+- 思维导图画布空白处左键拖放不再拖动画布，改为框选节点。屏蔽右键菜单，右键按住拖动画布。流程图只在每一行节点高度内左键拖放创建，此时鼠标变成待放置的节点；横隔线附近左键拖放为框选，仍用十字光标。已有节点内的交互不变，光标改成和思维导图一样的黑色箭头。
+
+**Assistant（实现前说明）**  
+- 思维导图左键平移改为只响应右键，左键空白拖放走框选，并拦住右键菜单。流程图按行内 36px 条目带创建，条目带之间的间隙框选。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 思维导图 `panOnDrag` 仅右键，`selectionOnDrag` 负责左键框选，画布上取消浏览器右键菜单。流程图条目带内跟随一个虚线节点作为放置光标；间隙保持十字并框选条目。节点、缩放手柄和连线手柄改为默认箭头。框选可多选，删除会删掉选中的条目。`tsc --noEmit` 通过。未在已登录画布上目视。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/pages/mind-map/MindMapEditorPage.tsx`  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+- `/Users/macbook/Workmap/apps/web/src/styles/flowchart-editor.scss`  
+
+---
+
+### 2026-10-11（Workmap：框选对齐、右键拖移、放置热区）
+
+**User（提示词/原意）**  
+- 思维导图左键框选有问题。鼠标在画布上应为十字，按住右键变为拖移手形。框选的选中范围与拖放范围不匹配。流程图也要按住右键拖移画布。点击新建的热区缩到节点高度的居中 60%。待放置光标缩短左右长度，改成更明显的浮动样式。
+
+**Assistant（实现前说明）**  
+- 框选默认要求节点完整落入矩形，根节点和清单节点的布局宽度又是 224px，而卡片实际是 296px，所以框和选中结果对不齐。改为相交即选中，并把布局宽度对齐到卡片。流程图右键滚动画布，新建热区收成条目高度的居中 60%，放置光标改短并浮起。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 思维导图画布十字光标，右键拖移时为抓取手形。框选改为碰到节点即选中，框选期间写回选中集合。根节点和清单节点的布局宽度改为 296px，与卡片一致。流程图右键拖移滚动层并屏蔽右键菜单；新建热区为节点高度居中的 60%；放置光标宽 80px，居中并带浮起阴影。`tsc --noEmit` 通过。未在已登录画布上目视（`/app/work-map` 会转到登录页）。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/pages/mind-map/MindMapEditorPage.tsx`  
+- `/Users/macbook/Workmap/apps/web/src/styles/aimlink-web-mindmap-editor.scss`  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+- `/Users/macbook/Workmap/apps/web/src/styles/flowchart-editor.scss`  
+
+---
+
+### 2026-10-11（Workmap：框选命中、节点上右键拖移、流程图横线与待放样式）
+
+**User（提示词/原意）**  
+- 思维导图框选范围仍不对，很容易全选。在节点范围内按住右键也要能拖动画布。流程图在天和时的颗粒下横隔线也要保留。节点高度 60% 热区内的待放焦点应在行内居中，不要浮移。待放节点和拖移落地的新节点用同一种样式，并区别于已有节点。
+
+**Assistant（实现前说明）**  
+- 库内置框选会把尚未量到尺寸的节点全部算进选区，所以一小下就全选。节点带有禁止平移的标记，右键落在节点上拖不动。横隔线改成逐行元素，避免天、时比例下大画布背景画不出来。待放光标取消上浮，并和拖出的新节点共用同一样式。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 框选改为用屏幕上的节点矩形和拖出的框做相交，不再走会全选的内置命中。右键在空白处和节点上都会拖移画布，光标为抓取手形。流程图每一行都画横线，盖在周末底色之上，天和时同样保留。待放光标锁在行内居中，不再上浮；它和拖移中的新节点都是虚线浅底，和已有白底节点区分开。`tsc --noEmit` 通过。未在已登录画布上目视。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/pages/mind-map/MindMapEditorPage.tsx`  
+- `/Users/macbook/Workmap/apps/web/src/styles/aimlink-web-mindmap-editor.scss`  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+- `/Users/macbook/Workmap/apps/web/src/styles/flowchart-editor.scss`  
+
+---
+
+### 2026-10-11（Workmap：空白点击取消选中、短条目可点选）
+
+**User（提示词/原意）**  
+- 思维导图已有节点选中时，在空白处点击且没有拖移，应视为框选空集，取消已选节点。流程图时间颗粒很大时，时长短或只有截止时间的节点点不中，也没有黑箭头焦点。有前后序的节点一点选就向左跳。
+
+**Assistant（实现前说明）**  
+- 空白点击因为没超过拖移阈值，不会改选中集合。短条目在粗颗粒下只有几像素，指针进不了节点，光标也就不会变成箭头。点击被当成拖移，起点被吸到上一格，有前后序、时间不在格线上的节点就会向左跳。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 思维导图空白处轻点会把选中集合清成空集。流程图条目最窄 36px，短时长和只有截止时间的条目可以点到，悬停是默认箭头。指针移动不足 4px 只选中、不改时间，避免一点就吸到上一格。`tsc --noEmit` 通过。未在已登录画布上目视。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/pages/mind-map/MindMapEditorPage.tsx`  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+
+---
+
+### 2026-10-11（Workmap：多选删除不跳回根节点）
+
+**User（提示词/原意）**  
+- 思维导图选中多个节点时无法一次全部删除。删除后视图总是跳到根节点。
+
+**Assistant（实现前说明）**  
+- 删除只处理当前主选中的一个节点。自动整理在删除后会重排，并顺带把镜头对准根节点。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- Delete / Backspace 会删掉所有选中节点及其子树，根节点保留。删除后的重排不再移动镜头。`tsc --noEmit` 通过。未在已登录画布上目视。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/pages/mind-map/MindMapEditorPage.tsx`  
+
+---
+
+### 2026-10-11（Workmap：快捷新建节点不拉视图）
+
+**User（提示词/原意）**  
+- 批量删除已经可以，删除后也不再拉视图。但键盘快捷创建新节点时又出现拉视图。
+
+**Assistant（实现前说明）**  
+- Enter 建同级、Tab 建子节点仍会触发自动整理，整理完成后镜头被对准根节点。删除那次已经跳过这次对焦，新建还没有。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- Enter 和 Tab 新建节点后仍会重排，但不再移动镜头。`tsc --noEmit` 通过。未在已登录画布上目视。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/pages/mind-map/MindMapEditorPage.tsx`  
+
+---
+
+### 2026-10-11（Workmap：新建节点后的测高不再拉视图）
+
+**User（提示词/原意）**  
+- Enter / Tab 创建新节点仍然会拉视图。
+
+**Assistant（实现前说明）**  
+- 新建当时跳过了一次对焦，但新节点测高会再次增加整理版本，那一次仍把镜头移到根节点。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 自动整理只在首次打开或切换方向时移动镜头。增删节点和测高重排不再移动视口。`tsc --noEmit` 通过。未在已登录画布上目视。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/pages/mind-map/MindMapEditorPage.tsx`  
+
+---
+
+### 2026-10-11（Workmap：流程图单击新建截止时间节点）
+
+**User（提示词/原意）**  
+- 流程图处于拖放新建节点的状态时，只点选、不拖移，也应新增节点。该节点只有截止时间，没有时长。
+
+**Assistant（实现前说明）**  
+- 单击不足 8px 会被丢掉。截止时间在数据里用一小时长的结束时刻表示，不写成一段起止区间。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 在行内新建热区单击，会在当前时间格的结束处放一个只有截止时间的节点，并进入编辑。拖移仍按拖过的区间创建有时长的节点。颗粒很粗时，这个节点的右边缘对齐截止时间。`tsc --noEmit` 通过。未在已登录画布上目视。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+
+---
+
+### 2026-10-11（Workmap：流程图节点手柄、无时长宽度与悬停全文）
+
+**User（提示词/原意）**  
+- 已有节点两端都要能拖起止时间。无时长节点的显示长度是当前颗粒的一单位，时颗粒为 2 小时。待放焦点提示为 “Add new”。内容被缩略时，悬停浮窗显示全文，样式与思维导图节点一致，不含起止时间。
+
+**Assistant（实现前说明）**  
+- 手柄还在 DOM 里，但没有可见样式，右端还缩进并被文字盖住。无时长仍按一小时或最小 36px 绘制。悬停全文做成思维导图任务卡（标题、@、#），不另画日程区间。存储的一小时截止编码不改，只改绘制宽度。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 时间视图节点左右两端恢复可见的拖拽手柄，拖动可改长短。无时长节点右缘仍对齐截止时间，宽度为当前一格；时颗粒为 2 小时。待放焦点文案为 “Add new”。名称被省略时悬停显示全文浮窗。`tsc --noEmit` 通过。未登录画布会跳到登录页，未目视。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+- `/Users/macbook/Workmap/apps/web/src/styles/flowchart-editor.scss`  
+
+---
+
+### 2026-10-11（Workmap：流程图拖长短手柄改为悬停光标）
+
+**User（提示词/原意）**  
+- 拖长短的手柄不需常显，鼠标摸到相应热区时更换焦点样式即可。
+
+**Assistant（实现前说明）**  
+- 两端热区仍在，但上面画了常显的紫色竖条。去掉竖条，热区保留左右拖拽光标。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 节点两端不再画出手柄。鼠标进入左端或右端热区时，光标变为左右拖拽，仍可拖改起止时间。仅改样式，未跑类型检查。未登录画布会跳到登录页，未目视。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/styles/flowchart-editor.scss`  
+
+---
+
+### 2026-10-11（Workmap：新建节点输入框去掉滚动条灰块）
+
+**User（提示词/原意）**  
+- 新建节点待输入时，提示语右侧有一块黑/灰块，应去掉。提示语过长时裁剪显示即可，不需缩略。
+
+**Assistant（实现前说明）**  
+- 那块是输入框在提示语换行后出现的滚动条。提示语改为单行裁切，不显示省略号，并藏掉滚动条。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 新建节点的名称输入改为单行，超出部分直接裁掉，不再出现右侧灰块，也不用省略号。仅改样式。未登录画布会跳到登录页，未目视。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/styles/flowchart-editor.scss`  
+
+---
+
+### 2026-10-11（Workmap：重跑本地测试服务器）
+
+**User（提示词/原意）**  
+- 重跑测试服务器。
+
+**Assistant（实现前说明）**  
+- 本机没有已在监听的 Vite。在 Workmap 根目录执行 `npm run dev`。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 开发服务器已启动：http://localhost:5173/ 。无代码变更。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap`  
+
+---
+
+### 2026-10-11（Workmap：流程图聊天框与最小化浮层图标）
+
+**User（提示词/原意）**  
+- 流程图也要有和思维导图完全一致的右下角聊天输入框。两边都在右上角加最小化，可收成附图那个浮层图标。
+
+**Assistant（实现前说明）**  
+- 复用思维导图的悬浮输入框。右上角加最小化，收起后用附图裁成的圆形图标。流程图的发送和历史走同一套地图助手。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 思维导图和流程图的聊天框样式一致，右上角可最小化成浮层图标，再点开恢复。流程图可发送修订并打开历史。`tsc --noEmit` 通过。未登录画布会跳到登录页，未目视。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/components/mind-map/MindMapAiFloatingComposer.tsx`  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+- `/Users/macbook/Workmap/apps/web/src/styles/aimlink-web-mindmap-editor.scss`  
+- `/Users/macbook/Workmap/apps/web/src/styles/flowchart-editor.scss`  
+- `/Users/macbook/Workmap/apps/web/src/assets/workmap-icons/ai-assistant.png`  
+
+---
+
+### 2026-10-11（Workmap：流程图父子任务展开）
+
+**User（提示词/原意）**  
+- 流程图要支持父子任务展开，展开固定为上-下。父任务左下角用思维导图同款子任务数。收起后，子任务的前后序仍连在各自的时间位置，看起来会接在父任务中部。父任务在图上的起止是自身和全部子任务的最早开始到最迟完成。
+
+**Assistant（实现前说明）**  
+- 父子和收起状态沿用思维导图节点。展开时子任务排在父任务下一行。图上宽度用时间合集，不改各自保存的起止。收起后子任务不画出，连线的横坐标仍是子任务自己的起止时刻，纵坐标落在父任务条的中线。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 有子任务的节点左下角显示数量，可展开或收起。展开为上-下排列。父任务条覆盖最早开始到最迟完成。收起后子任务连线仍落在原时间位置。`tsc --noEmit` 通过。未登录画布会跳到登录页，未目视。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+- `/Users/macbook/Workmap/apps/web/src/styles/flowchart-editor.scss`  
+
+---
+
+### 2026-10-11（Workmap：剔除父子前后序，流程图紧凑成行）
+
+**User（提示词/原意）**  
+- 父子任务之间如有前后序关联，应剔除并不生效。排布要紧凑，不要空行；时间不冲突的任务可以排在同一行，避免竖向行数太多。
+
+**Assistant（实现前说明）**  
+- 一条连线的两端若在流程图任务树上互为祖先，就从文档里删掉，排程和绘制都不再使用。行号改为按画出的时间区间做首个可放入的行：子任务严格在父任务下一行起排，其余不重叠的任务共用一行。不再按旧的 lane 空档留白行，也不再允许上下拖动改行。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 父子（含隔代）前后序会被去掉，新建时提示不能连接。已有连线在打开或后续保存时剔除，不再推动时间；已经被推后的时间不会自动拨回。任务按时间是否重叠挤到尽量少的行，子任务仍在父任务下方。画布高度跟紧凑后的行数走，不再按旧行号撑出空行。`tsc --noEmit` 通过。未登录画布会跳到登录页，未目视。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+
+---
+
+### 2026-10-11（Workmap：展开套框，拖移与空白处新建）
+
+**User（提示词/原意）**  
+- 父任务展开后要加淡化套框，把子任务包成一个整体。子任务应靠在父任务之下，展开时把靠近的节点推挤下移。移动父任务时，套框和子任务一起移动。紧凑排布只是自动排布的原则，仍要允许用户把节点拖开，也要允许在任意空白处新建。
+
+**Assistant（实现前说明）**  
+- 行号改回按节点自己的 lane 绘制，上下拖动会写回 lane。展开时把可见子任务紧凑排到父任务正下方，并把更下面的其他节点下移让出空位；收起时把这块高度收回。拖父任务时，其子任务的行和时间一起平移。新建和待放置焦点跟指针所在行，只有该行时间冲突才往下让。套框用父任务和可见子任务的外框。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 展开后父任务和子任务外包一层淡色框。子任务贴在父任务下方，旁边更低的节点被下移。拖动父任务时整组一起动；单独拖某个节点可以离开这组。空白行可以新建，焦点停在指针那一行。每个地图第一次打开时会把当前自动紧凑行写进 lane，之后的拖动会保留。`tsc --noEmit` 通过。未登录画布会跳到登录页，未目视。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+- `/Users/macbook/Workmap/apps/web/src/styles/flowchart-editor.scss`  
+
+---
+
+### 2026-10-12（Workmap：收紧流程图展开套框）
+
+**User（提示词/原意）**  
+- 套框尺寸调小。上部与父任务自身边缘重叠，下部与最下行子任务底部边缘重叠，两端与父任务两端对齐。
+
+**Assistant（实现前说明）**  
+- 去掉四周留白。套框左、右、上沿改用父任务条的边缘，下沿改用可见子任务里最底下那一行的底边。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 套框宽度与父任务条一致，上沿贴住父任务上沿，下沿贴住最底下一行子任务的底边，不再向外扩一圈。圆角改为与任务条一致。未登录画布会跳到登录页，未目视。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+- `/Users/macbook/Workmap/apps/web/src/styles/flowchart-editor.scss`  
+
+---
+
+### 2026-10-12（Workmap：前后序连线热区与浮窗）
+
+**User（提示词/原意）**  
+- 前后序连线不要常显 FS 标记，摸到再显示。沿线加大触摸热区，更容易点中。点开后的浮窗只留两行：第一行四个类型加删除图标，第二行 Lag 和输入框。
+
+**Assistant（实现前说明）**  
+- 类型标记默认隐藏，指针进入连线才显示。可见线条旁边加一条更宽的透明描边负责点选。浮窗去掉预览和关闭按钮，改成一行五个按钮，下一行是 Lag 输入。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- FS 等标记只在摸到连线时出现。沿线热区加宽，点中后浮窗只有类型、删除和 Lag。`tsc --noEmit` 通过。未登录画布会跳到登录页，未目视。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+- `/Users/macbook/Workmap/apps/web/src/styles/flowchart-editor.scss`  
+
+---
+
+### 2026-10-12（Workmap：Lag 单位可选）
+
+**User（提示词/原意）**  
+- Lag 行的单位还要保留，并且可选月、周、日、时，放在输入框之后。
+
+**Assistant（实现前说明）**  
+- 数字仍是 Lag 的数量。单位单独保存，缺省按日，和原来的天数一致。时按 60 分钟，周按 7 天，月按 30 天，换算进前后序推动。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- Lag 行是「Lag」、输入框、单位下拉。单位为 Month、Week、Day、Hour，放在输入框后面。摸到连线时，非零 Lag 会带上 h、d、w、mo。`tsc --noEmit` 通过。未登录画布会跳到登录页，未目视。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+- `/Users/macbook/Workmap/apps/web/src/styles/flowchart-editor.scss`  
+- `/Users/macbook/Workmap/apps/web/src/lib/flowchart-document.ts`  
+- `/Users/macbook/Workmap/apps/web/src/lib/map-view-align.ts`  
+
+---
+
+### 2026-10-12（Workmap：子任务拖出父任务显示范围）
+
+**User（提示词/原意）**  
+- 子任务拖移应支持超出父任务的当前显示时间范围，超出后反算父任务的显示周期。
+
+**Assistant（实现前说明）**  
+- 子任务可以拖到父任务显示条之外。拖动和改长短的过程中，沿祖先把各任务自己的时间重新取最早开始和最迟完成，只改显示，不改父任务自己保存的起止。松手后仍按同一套合集重算。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 拖子任务或拖它的边缘超出父任务当前显示范围时，父任务条和套框会跟着伸缩。父任务自己的时间定义不变。`tsc --noEmit` 通过。未登录画布会跳到登录页，未目视。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+
+---
+
+### 2026-10-12（Workmap：父任务按整组参与前后序）
+
+**User（提示词/原意）**  
+- 前后序会连带把后序往后推，也会限制后序往前移，但后序如果是父任务就不生效。父任务应作为含子任务的整体一起连带或限制。显示周期由父任务自己的数据和子任务算出，并直接当作该父任务的实际排期来计算。需要连带调整时，子任务整体跟着动，同时更新父任务自己的时间数据。
+
+**Assistant（实现前说明）**  
+- 排程改用父任务与全部子任务的最早开始、最迟完成，不再只用父任务自己保存的起止。算出要后移的量后，父任务和子任务加上同一段时间，父任务自己的起止也加上这段时间。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 父任务作为前序或后序时，都按整组的显示周期计算。后序是父任务时，会被后推，往前拖也会被挡回；子任务一起移动，父任务自己的时间同步加上同一偏移。`tsc --noEmit` 通过。未登录画布会跳到登录页，未目视。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/lib/flowchart-document.ts`  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+- `/Users/macbook/Workmap/apps/web/src/lib/map-view-align.ts`  
+
+---
+
+### 2026-10-12（Workmap：拖移父任务后按图写回时间）
+
+**User（提示词/原意）**  
+- 父任务自身被拖移时，其自身的时间数据也更新与图显一致。父任务周期与子任务冲突时仍反算显示；一旦该父任务在图上产生调整，则按图更新其数据消除冲突。
+
+**Assistant（实现前说明）**  
+- 仅有冲突时继续只改显示，不回写。父任务被拖移，或因前后序整组后移时，子任务仍一起平移，再把该父任务（及一起移动的下层父任务）保存的起止改成图上的整段周期。只拖子任务不回写祖先。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 松手后父任务自己的起止等于图上显示的最早开始到最迟完成，冲突被写回消除。前后序把父任务整组后推时同样按新的图上周期回写。`tsc --noEmit` 通过。未登录画布会跳到登录页，未目视。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/lib/flowchart-document.ts`  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+
+---
+
+### 2026-10-12（Workmap：同行时间重叠则下移一行）
+
+**User（提示词/原意）**  
+- 避免同一行显示的任务有时间重叠。拖移到一行发生重叠时，放到再下一行；被重叠的若是展开了子任务的父任务，则放到最后一行子任务的下一行。
+
+**Assistant（实现前说明）**  
+- 拖移预览和松手用同一套落点。目标行上按图上显示的时间判断重叠，端点相接不算重叠。整组一起下移。展开父任务的阻挡范围算到其当前可见子任务的最下一行。未改行、未改时间的拖移不主动重排。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 日程视图中，拖到会重叠的一行时自动改落到下一空行；挡住的是展开父任务时，落到它最下面一行子任务之下。子任务仍跟着父任务一起动。`tsc --noEmit` 通过。未登录画布会跳到登录页，未目视。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+
+---
+
+### 2026-10-12（Workmap：重叠行拖动可经过，松手再落位）
+
+**User（提示词/原意）**  
+- 拖移时冲突位置需可以经过，只是释放时如重叠则按上一则办法优化落地位置。
+
+**Assistant（实现前说明）**  
+- 拖动预览跟着手指，允许穿过时间重叠的行。松手时若仍重叠，再落到下一行；展开父任务则落到其最下一行子任务的下一行。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 预览不再因重叠改行。松手后的落点规则不变。`tsc --noEmit` 通过。未登录画布会跳到登录页，未目视。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+
+---
+
+### 2026-10-12（Workmap：展开时只挪会碰到套框的任务）
+
+**User（提示词/原意）**  
+- 展开父任务的子任务时，只调整将与该父任务的套框有重叠可能的其他任务的行位置，不会重叠的不需调整。
+
+**Assistant（实现前说明）**  
+- 子任务仍从父任务下一行起排布。套框覆盖父任务显示时间、以及父任务行到最下一行子任务。只有落在这些行里且时间和套框相交的其他任务，才移到套框下一行；时间不相交或在套框行之外的保持原行。收起不再把下方任务整段上拉。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 展开时只下移会与套框时间重叠的任务，其余不动。`tsc --noEmit` 通过。未登录画布会跳到登录页，未目视。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+
+---
+
+### 2026-10-12（Workmap：被推移的展开父任务整组下移）
+
+**User（提示词/原意）**  
+- 展开父任务时，如果其他展开的父任务被推移，应该其套框和子任务整体推移。
+
+**Assistant（实现前说明）**  
+- 被套框挤开的若是已展开父任务，不只改它自己的行。它和全部子任务加上同一行偏移，套框随位置一起下移。嵌套在里面的展开父任务跟着外层走，不再单独落位。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 展开时，被推移的展开父任务带着子任务和套框整体下移，组内相对行距不变。`tsc --noEmit` 通过。未登录画布会跳到登录页，未目视。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+
+---
+
+### 2026-10-12（Workmap：AI 前后序提示词补全反向依赖）
+
+**User（提示词/原意）**  
+- AI 规划的 WBS 已完整合理，但任务前后序依赖有缺漏。需优化提示词，增强流程关系的完整定义。生成顺序是 WBS，尤其当业务上先生成的任务依赖于后生成的任务时，应有则补全，不遗漏。
+
+**Assistant（实现前说明）**  
+- 只改 `generate_wbs` 的服务端提示词。大纲写完后要求再扫一遍依赖。明确 `from` 可以大于 `to`：先写在大纲里的任务若要等后面的任务，必须连上，不能按书写顺序漏掉。父子缩进仍不写成前后序。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 提示词已改为 WBS 之后的第二遍依赖检查，并在示例里放了后生成任务作为前序的连线。需重新部署 `workmap-ai` 后，新的规划才会用到这段提示词。未改解析逻辑。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/supabase/functions/workmap-ai/index.ts`  
+
+---
+
+### 2026-10-12（Workmap：提交并部署 workmap-ai）
+
+**User（提示词/原意）**  
+- 提交部署 workmap-ai。
+
+**Assistant（实现前说明）**  
+- 只提交 `supabase/functions/workmap-ai/index.ts`。流程图等其余未提交改动不纳入本次提交。部署到 Supabase 项目 `ychcuxqggqceaodhoutv`。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 本地提交 `51680bf`：补全 AI 规划里先写任务对后写任务的前后序依赖。`supabase functions deploy workmap-ai` 已成功。未 push 远程 git。流程图相关改动仍留在工作区。
+
+**关联**  
+- `/Users/macbook/Workmap/supabase/functions/workmap-ai/index.ts`  
+
+---
+
+### 2026-10-12（Workmap：AI 首次生成按整组排布避免套框重叠）
+
+**User（提示词/原意）**  
+- 单个推移避免重叠的规则符合预期，但从 AI 生成数据首次生成整个画布时，还有很多套框重叠，或父子任务不整体。
+
+**Assistant（实现前说明）**  
+- 生成后原先按大纲逐行占一行，首次紧凑排布又会把别的任务插进套框行。改为生成后整组落位：展开父任务与子任务保持相对行距一起移动；时间与套框相交的其他组整组下移，不相交的可以同行。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- `documentsFromGeneratedOutline` 在排程后调用 `arrangeScheduleLanes`。日程视图的一次性自动排布也改用同一套。已有地图不会自动重排，需要重新生成。`tsc --noEmit` 通过。未登录画布会跳到登录页，未目视。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/lib/flowchart-layout.ts`  
+- `/Users/macbook/Workmap/apps/web/src/lib/map-view-align.ts`  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+
+---
+
+### 2026-10-12（Workmap：流程图顶栏对齐思维导图并增加整理画布）
+
+**User（提示词/原意）**  
+- 画布上方的标题和按钮，flowchart 也设计成跟 mindmap 一样的布局和样式，可复用的功能复用，加一个整理画布功能，用于一键优化排布整个画布的排列。
+
+**Assistant（实现前说明）**  
+- 流程图顶栏改用思维导图同一套工具栏样式：标题、分段按钮、右侧操作。全屏沿用同一套浏览器全屏。整理画布调用已有的整组排布。操作说明改到标题栏下方的提示行。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 流程图顶栏为地图标题、时间比例、Schedule/Order、Tidy canvas、Delete 和全屏。Tidy canvas 按当前视图把整张画布重新排成不重叠的整组。`tsc --noEmit` 通过。未登录画布会跳到登录页，未目视。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+- `/Users/macbook/Workmap/apps/web/src/pages/WorkMapPage.tsx`  
+- `/Users/macbook/Workmap/apps/web/src/styles/flowchart-editor.scss`  
+
+---
+
+### 2026-10-12（Workmap：流程图顶栏搜索下载，视图更名为 WBS map / Flow map）
+
+**User（提示词/原意）**  
+- delete 按钮去除，同样增加搜索和下载按钮，整理画布左移靠近缩放比例尺。Mindmap 和 Flowchart 全局更名为 WBS map 和 Flow map。
+
+**Assistant（实现前说明）**  
+- 流程图顶栏去掉 Delete，搜索和下载沿用思维导图的图标按钮、弹层样式和快捷键。Tidy canvas 放到时间比例尺右侧。界面文案里的 Mind map / Flowchart 改为 WBS map / Flow map，内部类型名不动。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 流程图顶栏顺序为标题、时间比例、Tidy canvas、Schedule/Order，右侧为搜索、下载、全屏。搜索选中条目并滚入视口，收起的父任务会展开。下载导出当前 flow 文档 JSON。新建菜单、视图切换、缺省标题和相关提示已改名。`tsc --noEmit` 通过。未登录无法目视画布。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+- `/Users/macbook/Workmap/apps/web/src/pages/WorkMapPage.tsx`  
+
+---
+
+### 2026-10-12（Workmap：流程图操作说明移到底栏并注明 React Flow）
+
+**User（提示词/原意）**  
+- 画布顶部的操作说明文字，同样放在画布底部，采用一样的样式，右端注明 React Flow。
+
+**Assistant（实现前说明）**  
+- 把流程图操作说明从顶栏下方移到画布底部，复用思维导图底栏样式，右端放 React Flow 链接。聊天浮层仍盖在画布上，不压住底栏。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 流程图底栏为原操作说明，右端是 React Flow 链接，样式与思维导图底栏相同。`tsc --noEmit` 通过。未登录无法目视。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+- `/Users/macbook/Workmap/apps/web/src/styles/flowchart-editor.scss`  
+
+---
+
+### 2026-10-12（Workmap：流程图 Order 按钮改为 Sequence）
+
+**User（提示词/原意）**  
+- 按建议把 Order 改为 Sequence。
+
+**Assistant（实现前说明）**  
+- 只改流程图视图按钮文案和悬停说明。内部 `viewMode: 'order'` 不动。Schedule 保持原名。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 按钮为 Sequence，悬停为 “What must come first. Dates stay saved, but hidden.” 未目视。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+
+---
+
+### 2026-10-12（Workmap：WBS 改时间后 Flow map 按新数据重绘）
+
+**User（提示词/原意）**  
+- WBS map 中修改父任务时间后，切换 Flow map 时又被恢复了。修改或删除 node 的起止时间后，Flow map 应按新数据重绘，重叠则自动调整。
+
+**Assistant（实现前说明）**  
+- 父任务条子此前按「自身 + 全部子任务」的合集绘制，所以 WBS 里改过的区间一切到 Flow 就被旧范围盖住。没有日期的任务也不会清掉旧条子。改为以 WBS 上的起止时间为这条任务自己的绘制数据；时间有变化时按现有整组规则重排，避开同一行重叠。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- `applyMindSchedule` 对每个任务写入新区间，删掉日期则回到未排期的一日条子。区间变化后调用 `arrangeScheduleLanes`。Flow 条子按任务自身起止绘制，不再用子任务把父任务拉回旧范围。`tsc --noEmit` 通过。未登录无法目视。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/lib/map-view-align.ts`  
+- `/Users/macbook/Workmap/apps/web/src/lib/flowchart-layout.ts`  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+- `/Users/macbook/Workmap/apps/web/src/pages/mind-map/MindMapEditorPage.tsx`  
+
+---
+
+### 2026-10-12（Workmap：父任务删时间后按子任务反算）
+
+**User（提示词/原意）**  
+- 父任务的时间在 WBS map 中删除后，Flow map 应根据子任务反算。要求登录页面自查。
+
+**Assistant（实现前说明）**  
+- 上一轮把「没有日期」一律画成起点处的一日条子，父任务删掉日期后不再包住子任务。改为：任务自己写了日期就用自己的；没写日期时，从已排期的直接子任务取最早开始和最晚结束（子任务先算好，再向上汇总）。既无日期也无已排期子孙的任务仍是一日未排期条子，避免空任务把父任务拉回起点。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- `applyMindSchedule` 按深度从深到浅汇总。已用测试账号登录 `http://localhost:5173`，在地图 gdfgdfg 写入 Parent（无日期）、Child A `#2026/11/03 #2026/11/20`、Child B `#2026/12/01 #2026/12/05`。切到 Flow map Schedule 后实测：Parent 与 Child A 同左（11 月 3 日），右端与 Child B 对齐（12 月 5 日结束，宽 2376px = 33 天 × 72px）；无日期的 Task 2 仍是起点处一日条子，没有把 Parent 拉回去。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/lib/map-view-align.ts`  
+
+---
+
+### 2026-10-12（Workmap：父任务显示反算与数据回写分开）
+
+**User（提示词/原意）**  
+- Flow map 里父任务盖不住子任务（含父任务没写时间）时，显示区间按子任务最早开始到最晚完成反算，但不立刻改父任务的时间数据。拖改父任务时间，松手时再校验，冲突则反算显示。在 Flow map 里改过这一组之后，才按显示区间更新数据。再次打开 Flow map 时，只有数据变了的条目重绘重排。
+
+**Assistant（实现前说明）**  
+- 上一轮把反算结果直接写进父任务的 start/end。改为绘制用 `scheduleDisplaySpans`（盖得住就用自己的区间，盖不住才用子任务跨度），WBS 对齐只写入各自日期、缺日期则清成未排期。松手或拖动该组时 `matchMovedParentSpans` 才把显示区间写回数据。再次打开只对起止或显示跨度变了的条目调用 `reflowChangedScheduleLanes`。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 登录后在 gdfgdfg 核对：删掉 Parent 日期再进 Flow map，条子仍包住子任务，回到 WBS 后 Parent 仍无日期。拖动该组松手后，Parent 写上与显示一致的日期。子任务伸出父任务时，条子拉长但 WBS 日期不变；把父任务右端拖短，拖动中变短，松手弹回子任务跨度，并因此把数据写成该显示区间。无改动再打开，四条位置不变；只改 Child A 时 Task 2 与 Child B 不动，Child A 因重叠换行。`tsc --noEmit` 通过。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/lib/flowchart-document.ts`  
+- `/Users/macbook/Workmap/apps/web/src/lib/flowchart-layout.ts`  
+- `/Users/macbook/Workmap/apps/web/src/lib/map-view-align.ts`  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+
+---
+
+### 2026-10-12（Workmap：父任务反算包含自身时间）
+
+**User（提示词/原意）**  
+- 父应包子。最早开始到最晚完成的反算要带上父任务自己的时间：父任务开始得比所有子任务更早，开始时间就用父任务自己的。
+
+**Assistant（实现前说明）**  
+- 冲突时显示跨度此前只用子任务，父任务更早的开始被丢掉。改为父任务自己有时间时，取父任务与已排期子任务里更早的开始、更晚的结束。父任务没有时间时仍只用子任务，避免未排期的一日占位把整组拉回起点。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 已在 gdfgdfg 核对：Parent `#2026/11/01 #2026/11/10`，Child A `#2026/11/03 #2026/11/20`，Child B `#2026/12/01 #2026/12/05`。Flow map 上 Parent 比 Child A 早 2 天开始（左端差 144px），右端与 Child B 对齐（12 月 5 日，宽 2520px = 35 天）。回到 WBS 后 Parent 仍是 11 月 1 日到 11 月 10 日，没有被反算写回。`tsc --noEmit` 通过。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/lib/flowchart-document.ts`  
+
+---
+
+### 2026-10-12（Workmap：套框颜色与框内新建挂到父任务）
+
+**User（提示词/原意）**  
+- 展开的父任务套框换一种颜色，现在和周末底色太接近。在套框内新建 node，WBS 上也要放进该父任务。
+
+**Assistant（实现前说明）**  
+- 套框是很淡的靛蓝，叠在灰色周末条上几乎看不出来。框内新建的流程图条目在对齐时一律挂到第一个 section。改为暖琥珀色套框；按下位置落在套框内时，把新节点插到该父任务的子节点末尾，嵌套时取最内层套框。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 已在 gdfgdfg 的 Flow map 核对：套框为琥珀色，周末底色仍是灰蓝，两者可分开。在 Parent 套框内空行点出新条目后，WBS 大纲里它排在 Parent 的子任务下（与 Child A、Child B 同级），Parent 子节点数变为 3。`tsc --noEmit` 通过。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/styles/flowchart-editor.scss`  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+
+---
+
+### 2026-10-12（Workmap：Flow map 的 Enter / Tab）
+
+**User（提示词/原意）**  
+- WBS 的 Enter 建同级、Tab 建子级在 Flow map 上复用。Enter 的同级开始时间紧接当前条目的完成时间，并连上前后序。Tab 建子级并展开，子级开始时间与当前条目一致。
+
+**Assistant（实现前说明）**  
+- Flow map 此前只有点按和拖拽新建。选中一条且不在输入框里时，Enter 在其后插入同级：起点等于当前结束时刻，时长相同，并加一条 FS 连线。Tab 把父任务展开，子级起点和时长与当前条目相同，挂到该父任务下。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 已在 gdfgdfg 核对。对 Child A（11 月 3 日–11 月 20 日）按 Enter：新同级从 11 月 21 日画到 12 月 8 日，左端紧接 Child A 右端，前后序连线从 0 增到 1，WBS 里排在 Child A 后面、同属 Parent。对 Parent 按 Tab：新子级为 11 月 1 日–11 月 10 日，与 Parent 自身起止一致，并出现在 Parent 之下。`tsc --noEmit` 通过。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+
+### 2026-10-12（Workmap：Flow map 的方向键）
+
+**User（提示词/原意）**  
+- 上下左右箭头键导航也需复用，交互规则跟 WBS map 保持一致。
+
+**Assistant（实现前说明）**  
+- WBS 按节点中心找该方向上最近的可见节点：主轴位移须大于 0.5px，分数为距离乘以方向偏离，直接父子只在分数相同时作最后比较，然后把节点滚进视口并留 48px 边距。Flow map 对当前看得见的条子用同一套。未选中、正在输入或正在改名时不移动选中。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 已在 gdfgdfg 核对。Schedule 下从 Child B 按左落到 11 月 21 日那条同级，上回到 Child B，下再回到该同级；再按左落到 Parent，滚动为 left 1416（条左缘减 48）、top 3（条顶减 48）。从 Parent 按下落到 Child A。搜索框和改名框里按方向键不改变选中。Sequence 下从 Child A 按右落到下一列的同级卡。核对时一次合成指针把 Child B 挪到了 11 月 30 日–12 月 4 日，已在 WBS 改回 12 月 1 日–12 月 5 日，Flow 条左缘回到 3624。`tsc --noEmit` 通过。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+
+### 2026-10-12（Workmap：左栏滚动条贴边）
+
+**User（提示词/原意）**  
+- 左侧栏文件过多时出现滚动条，占了横向位置，导致横向也出现滚动条。竖向滚动条应右移到左栏边缘，不占文件名称和操作图标的位置。
+
+**Assistant（实现前说明）**  
+- 左栏本身不滚动，却用了 `scrollbar-gutter: stable`，先空出约 15px。文件列表再在内部画出竖向滚动条，行宽仍固定 220px，于是内容比可视区宽，底部出现横向滚动条，操作图标也被挤进滚动条里。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 取消左栏的稳定槽位，列表铺满栏宽，竖向滚动条落在左栏右缘；行宽改为 100%，横向溢出关掉。已在页面上核对：有竖向滚动、没有横向滚动，滚动条右缘与栏右缘对齐，操作图标在滚动条左侧。回收站列表用同一套行宽。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/styles/aimlink-web-work-map-port.scss`  
+
+### 2026-10-12（Workmap：WBS 左右 / 右左连线）
+
+**User（提示词/原意）**  
+- WBS map 的左右、右左模式下，根节点和 section 节点的连线位置有误，线没有连到 node 上。
+
+**Assistant（实现前说明）**  
+- 根节点和清单节点的样式宽度是 224px，布局和连线却按任务节点的 296px 计算。左右、右左从盒子左右缘出线，端点会落在可见节点外面。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 根与清单的布局宽度改为 224px，与样式一致。在 gdfgdfg 的左右布局上核对：根到 section、section 到任务的线端都落在节点左右缘中点（偏差为 0）。右左是同一套宽度的镜像。核对后已切回文字模式。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/pages/mind-map/MindMapEditorPage.tsx`  
+
+### 2026-10-12（Workmap：Flow map 展开父任务的套框）
+
+**User（提示词/原意）**  
+- Flow map 上展开的父任务需要略有区别：套框需前置，父任务本身加一点背景色。
+
+**Assistant（实现前说明）**  
+- 套框原先在网格和周末底色下面。展开的父任务条和普通条目一样是白底。把套框抬到网格前面，父任务条加一层浅暖色，子任务条保持白色。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 套框叠在网格和周末底色之上，条目和连线仍盖在套框上。展开的父任务条背景为浅暖色。已在 gdfgdfg 的 Flow map 上看过：Parent 为暖色条，套框盖住周末底色，Child A 仍是白条。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/styles/flowchart-editor.scss`  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+
+### 2026-10-12（Workmap：Flow map 套框边线与父任务底色）
+
+**User（提示词/原意）**  
+- 父任务的背景色过深，只需轻微区分。套框边缘应放在次顶层，顶层是各任务的连线小圈。
+
+**Assistant（实现前说明）**  
+- 父任务条用了较深的暖色。套框整块和任务条同一层，边线会被条盖住，连线小圈又包在任务条里，抬边线会把小圈盖住。底色改淡；套框拆成底层填色和上层边线，连线小圈单独画在边线上面。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 父任务底色改为约 6% 的琥珀色。套框填色仍在任务条下面，边线在任务条上面，连线小圈在边线上面。已在 gdfgdfg 的 Flow map 上点到父任务右端小圈，命中的是连线按钮而不是套框。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/styles/flowchart-editor.scss`  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+
+### 2026-10-12（Workmap：Flow map 父任务底色再减淡）
+
+**User（提示词/原意）**  
+- 展开父任务的底色加得更深了，应该大幅减淡。
+
+**Assistant（实现前说明）**  
+- 父任务条是 20% 透明琥珀，套框填色会透上来，叠在一起比白条深很多。改成不透明的极浅暖色，套框不再透过任务条。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 展开父任务条背景改为 `#fffdf8`。已在 gdfgdfg 的 Flow map 上核对：父任务条为 rgb(255, 253, 248)，子任务条仍是纯白。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/styles/flowchart-editor.scss`  
+
+### 2026-10-12（Workmap：Flow map 套框后移、子任务数字标前置）
+
+**User（提示词/原意）**  
+- 套框后移，子任务数字标应该前置。
+
+**Assistant（实现前说明）**  
+- 套框边线叠在任务条上，数字标包在任务条里，会被边线压住。边线退到任务条后面，数字标拿到画布上、放在连线小圈下面。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 套框边线降到任务条后面。子任务数字标单独画在套框之上、连线小圈之下。已在 gdfgdfg 的 Flow map 上点到 Parent 角上的 5，命中的是折叠按钮。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/styles/flowchart-editor.scss`  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+
+### 2026-10-12（Workmap：Flow map 套框边线盖住任务边线）
+
+**User（提示词/原意）**  
+- 套框边线后置过多，应该覆盖 node 的边线，父子任务套框才显得整体。
+
+**Assistant（实现前说明）**  
+- 套框边线在任务条后面，父子任务各有自己的边，套在一起不连成一块。边线抬到任务边线之上，数字标和连线小圈仍留在更上面。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 套框边线盖住任务条边线，填色仍在条后面。数字标在边线之上，连线小圈在最上层。已在 gdfgdfg 的 Flow map 上看过：Parent 的上沿和左沿是套框边线，角上的 5 仍在前面。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/styles/flowchart-editor.scss`  
+
+### 2026-10-12（Workmap：Flow map 父任务底色略加重）
+
+**User（提示词/原意）**  
+- 父任务的底色再加重一点。
+
+**Assistant（实现前说明）**  
+- 当前 `#fffdf8` 几乎看不出暖色。改成稍深的不透明暖色，套框填色仍不透过任务条。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 展开父任务条背景改为 `#fff6ee`。已在 gdfgdfg 的 Flow map 上核对：父任务条为 rgb(255, 246, 238)，子任务条仍是纯白。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/styles/flowchart-editor.scss`  
+
+### 2026-10-12（Workmap：Flow map 拖动时父任务与套框按全组反算）
+
+**User（提示词/原意）**  
+- 拖动调整子任务时间时，父任务和套框的反算有 bug，要按所有子任务以及父任务本身的时间，不能只看当前正在调整的那条。
+
+**Assistant（实现前说明）**  
+- 拖子任务时父条已按全组取并集，但拖到和父条重合的边缘时，动的是父条自己的显示区间，套框会跟着收进去，其它子任务露在外面。拖动预览改为：正在拖的那条用新时间，父条和套框按父任务自身时间加上全部子任务的当前时间取并集。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 已在 gdfgdfg 的 Flow map 上看过：把父条右端往里拖，套框仍停在最晚的子任务上；把最晚的子任务缩短到 Child B 左边，父条和套框停在 Child B；把与父任务同起点的子任务往后拖，父条左端仍停在父任务自己的开始时间。松手后数据未改。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+
+### 2026-10-12（Workmap：Flow map Enter 同级从完成时刻开始）
+
+**User（提示词/原意）**  
+- Enter 创建同级时，新任务的开始时间应等于当前节点的完成时间。刚测试是完成时间再加 1 小时。
+
+**Assistant（实现前说明）**  
+- 跨天的任务，新同级的起点已经等于当前条的结束时刻。1 小时长的节点只把完成时刻写在标签上，再复制同样长度，新标签就会落在完成时刻之后 1 小时。这种同级改为从完成时刻起、长度为 1 天，标签上的开始时间就是该完成时刻。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 已在 gdfgdfg 上看过：Child A 结束于 11 月 20 日，Enter 同级从 11 月 21 日 0 点开始，两条相接。`#2026/11/05 00:00` 这种 1 小时节点，Enter 同级的标签是 `#2026/11/05`，起点就是该完成时刻，不再是 01:00。测试条目已删。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+
+### 2026-10-13（Workmap：Flow map 新建时长）
+
+**User（提示词/原意）**  
+- Enter/Tab 创建新 node，默认时长应该跟当前节点一样。点击空白处新建（未拖移），默认时长为当前视图的颗粒长度。
+
+**Assistant（实现前说明）**  
+- Enter/Tab 已按当前条的起止差复制时长；此前 1 小时节点的同级被改成 1 天，这次改回与当前节点相同。空白单击原先固定为 1 小时，改为占满指针所在的那一格（小时/天/周等当前刻度）。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 已在 v543 的 Flow map（日刻度）上看过：Enter 同级与 Tab 子级都是 5760 分钟，与当前条一致；空白单击新建为 1440 分钟，即一天。测试条目已删。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+
+### 2026-10-13（Workmap：推送 Cloudflare Pages）
+
+**User（提示词/原意）**  
+- 推送 Cloudflare 构建发布。
+
+**Assistant（实现前说明）**  
+- 无新的代码改动。核对 `main` 与 `origin/main`，再看 GitHub 上 Cloudflare Pages 的检查结果。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- `git push` 为 Everything up-to-date。提交 `a6d9641`（flow map精细优化）已在远程。Cloudflare Pages 检查为 Deploy successful，预览地址 https://17aa4a66.aim-link-v2.pages.dev 。
+
+**关联**  
+- https://github.com/jamesgao27/Workmap/commit/a6d9641  
+
+### 2026-10-18（Workmap：Flow map Sequence 分列）
+
+**User（提示词/原意）**  
+- Schedule 先保持。Sequence 显示凌乱。横向分列要交错：宽列放任务，窄列放连线。父子套框跟 Schedule 一样，不能互相重叠，可以包含。任务顺序跟有时间线时一样：时间早的靠左，前序任务靠左。
+
+**Assistant（实现前说明）**  
+- Sequence 原先只按依赖深度分列，行还用 Schedule 的泳道，套框会叠住。改为按显示开始时间从左到右分列，前序再把后序推到右边；宽 200、窄 64 交替。行按套框重排，只在画面上算，不改 Schedule 已保存的泳道。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 已在 v543 的 Sequence 上看过：相邻列间距 264，任务宽 200、连线列宽 64。展开后 23 张卡、8 个套框，卡不重叠，套框只有包含关系。开始时间从左到右不回头，15 条连线的前序都在后序左边。核对后已收回展开并回到 Schedule。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+- `/Users/macbook/Workmap/apps/web/src/lib/flowchart-layout.ts`  
+- `/Users/macbook/Workmap/apps/web/src/lib/flowchart-document.ts`  
+
+### 2026-10-18（Workmap：Sequence 只按流程排布）
+
+**User（提示词/原意）**  
+- 连线列不必加不同底色，间距只是为了任务不重叠。并行连线要把后序任务分到不同行，避免连线叠在一起分不清起终点。去掉时间排期：没有依赖的任务在左侧往下排。Sequence 只体现任务之间的流程关系。
+
+**Assistant（实现前说明）**  
+- 去掉宽列/窄列的底色。列不再按开始时间排，只按前后序：没有前序的任务都在最左列，从上往下排。同一个任务的多个后序分到不同行。Schedule 的泳道仍不改写。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 已在 v543 的 Sequence 上看过：没有连线列底色，任务之间留空。展开后 15 条连线的前序都在左边，同一任务的后序不在同一行。没有前序的任务在最左列往下排。核对后已收回展开并回到 Schedule。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/lib/flowchart-layout.ts`  
+- `/Users/macbook/Workmap/apps/web/src/lib/flowchart-document.ts`  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+- `/Users/macbook/Workmap/apps/web/src/styles/flowchart-editor.scss`  
+
+### 2026-10-18（Workmap：Sequence 空行与子任务左对齐）
+
+**User（提示词/原意）**  
+- 自己测一下，Sequence 现在有很多空行。子任务仍要跟着父任务。流程里的第一个子任务（不一定是 WBS 的第一个）应与父任务左端对齐。
+
+**Assistant（实现前说明）**  
+- 空行来自全局分列：没有连线的子任务被放到第 0 列，套框再把别的任务往下推，中间行号空着。改为按父任务成组排：子任务的列是父任务列加上兄弟之间的流程波次，最早那一波与父任务左对齐；行在组内压紧，组与组上下相接，不留空行。不写回 Schedule 泳道。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 已在 v543 展开后的 Sequence 上看过：23 张卡、13 行连续（0 到 12），空行 0。8 组父子里，流程最早的子任务都与父任务同一左端，更靠后的子任务在右边。同一任务的并行后序不在同一行。套框只有包含、没有交叉。核对后已收回展开并回到 Schedule。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/lib/flowchart-layout.ts`  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+
+### 2026-10-18（Workmap：Sequence 套框不再叠成一块）
+
+**User（提示词/原意）**  
+- 层层叠叠，乱七八糟。
+
+**Assistant（实现前说明）**  
+- 子任务和后序兄弟挤在同一片矩形里，外框把旁边的任务和空白一起罩住，叠色变成一整块橙色。改为每个子任务块只占自己的列：后序只右移一列，前一个任务若有子任务，后序改到该块下方。套框按每一行有任务的范围描边，空白格子不再铺色。Schedule 套框仍是整块矩形。不写回泳道。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 已在 v543 展开后的 Sequence 上看过：23 张卡落在 6 列、15 行（0 到 14），没有空行。流程最早的子任务与父任务左端对齐，444 就在「阿时代方式地方」正下方。套框顺着任务走，下方空白不再被橙色盖住，套框之间没有交叉。核对后已收回展开并回到 Schedule。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/lib/flowchart-layout.ts`  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+- `/Users/macbook/Workmap/apps/web/src/styles/flowchart-editor.scss`  
+
+### 2026-10-18（Workmap：Sequence 圆角套框与流程图规则）
+
+**User（提示词/原意）**  
+- 套框样式不要改，仍应是圆角矩形，跟 Schedule 一样。Flow map 是从左上到右下的流程图：前序靠左，后序靠右；没有前后序关系的，WBS 靠前的靠上。父任务展开后是一张小流程图，子任务在套框里仍按这套规则排。节点不能重叠，展开的父任务套框也不能互相重叠，但可以包含子任务再展开的套框。Schedule 按时间轴算左右；Sequence 没有时间轴，只看前后序。
+
+**Assistant（实现前说明）**  
+- 去掉按行拼接的折线套框，恢复和 Schedule 相同的圆角矩形。Sequence 改为：每个展开的父任务是一块小流程图，前序整块在左、后序整块在右，没有连线关系的按 WBS 从上往下。块与块的矩形不交叉，子块落在父块里面。不写回 Schedule 泳道。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 已在 v543 展开后的 Sequence 上看过：套框是圆角矩形（圆角 8px），没有折线描边。23 张卡互不重叠。15 条连线的前序都在后序左边。8 个套框只有包含、没有交叉。没有前序的子任务与父任务左端对齐。核对后已收回展开并回到 Schedule。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/lib/flowchart-layout.ts`  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+- `/Users/macbook/Workmap/apps/web/src/styles/flowchart-editor.scss`  
+
+### 2026-10-18（Workmap：Sequence 连线转角加大）
+
+**User（提示词/原意）**  
+- 连线的转角半径需加大，以便更明确连线方向，尤其是连线重叠的地方。
+
+**Assistant（实现前说明）**  
+- Sequence 折线原来是直角。在任务列之间的空隙里把转角做成圆角，半径 28，并按横竖两段的长度收住，避免拐出节点。同一行的连线仍是直线。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 已在 v543 展开后的 Sequence 上看过：15 条连线里，3 条折线都带圆角，没有剩直角；从同一侧出发的两条线能看出各自往下再向右。核对后已收回展开并回到 Schedule。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+
+### 2026-10-18（Workmap：Sequence 拖动与紧左紧上）
+
+**User（提示词/原意）**  
+- Sequence 模式下也要能拖动节点。拖动父任务时，套框整体移动。自动优化布局时，在不重叠的基础上紧左紧上排列。
+
+**Assistant（实现前说明）**  
+- 拖动只改 Sequence 的格子，不改 Schedule 的泳道。父任务拖动时，子任务跟着同一位移。松手时若会叠住别的任务或套框，就近挪到空位。整理画布从当前排布往上、再往左收，后序仍在前序右边。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 已在 v543 的 Sequence 上拖过「时代方式分」：它和子任务一起右移一列、下移两行，其他任务不动，Schedule 泳道未改，卡片没有重叠。整理画布后范围从 13 列 7 行收到 12 列 4 行，仍从左上角排起，套框没有交叉。测试位移已清掉，并回到 Schedule。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/lib/flowchart-layout.ts`  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+- `/Users/macbook/Workmap/apps/web/src/lib/flowchart-document.ts`  
+- `/Users/macbook/Workmap/apps/web/src/lib/map-view-align.ts`  
+
+### 2026-10-18（Workmap：Sequence 缩放与 WBS 一致）
+
+**User（提示词/原意）**  
+- Sequence 模式增加缩放，跟 WBS map 的缩放效果和交互用同一套。
+
+**Assistant（实现前说明）**  
+- 工具栏放同一套缩放尺：60% 到 150%，档位 60、80、100、125、150。点加减或刻度用 220ms 过渡，拖滑块即时缩放，Ctrl/双指滚轮绕指针缩放。画布按比例缩放，滚轮仍是平移。Schedule 的时间比例尺不动。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 已在 v543 的 Sequence 上看过：默认 100%。点放大到 125%，卡片视觉宽度从 200 变为 250。Ctrl+滚轮收到 150% 上限。放大后仍能点中任务。切回 Schedule 后时间比例尺还在，缩放尺收起。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+- `/Users/macbook/Workmap/apps/web/src/styles/flowchart-editor.scss`  
+
+### 2026-10-18（Workmap：Sequence 点击创建落在指针处）
+
+**User（提示词/原意）**  
+- Sequence 模式下，鼠标点击创建新 node，也应该点在哪儿创建在哪儿。只有 Tidy 画布时再自动调整位置。
+
+**Assistant（实现前说明）**  
+- 新建不再交给流程算法重排。指针所在格子就是新任务的位置，已有任务先按当前画面记下格子，避免被挤走。整理画布仍是唯一会重新紧左紧上的操作。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 已在 v543 的 Sequence 上点过第 1 列第 0 行的空位：新任务出现在该格，原有 6 张可见卡都没动。测试任务已删掉，并回到 Schedule。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+
+### 2026-10-18（Workmap：父任务条与套框宽度不一致）
+
+**User（提示词/原意）**  
+- 检查「尊界666汽车全面测评项目WBS」这张 Schedule 图，为何有的父任务长度和套框不一致。
+
+**Assistant（实现前说明）**  
+- 无代码变更。对照父任务存档时间、子任务时间和画面上的条宽、套框宽。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 周视图下一天大约 19 像素，短任务最短画成 36 像素。父任务条按真实起止（含子任务最早到最晚）画，套框按画出来的色块外缘包，所以右边普遍长出约 17–18 像素。左边都对齐。例如工艺评价条宽 56、套框 73；功能实测条宽 93、套框 110。未改代码。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+
+### 2026-10-18（Workmap：父任务条与套框按反算时间对齐）
+
+**User（提示词/原意）**  
+- 父任务长度应和套框保持一致。显示按反算的起止时间来。父任务的数据只在拖动其排期时更新。
+
+**Assistant（实现前说明）**  
+- 短任务不再被加到 36 像素。套框左右边改用父任务反算后的起止时间，和父任务条同一段。拖动某个父任务时，只把这一条的存档改成当时的显示区间；子任务和其他父任务的存档不动。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 已在「尊界666汽车全面测评项目WBS」的 Schedule 上看过：20 个展开的父任务，条的左右端都和自己的套框对齐。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+- `/Users/macbook/Workmap/apps/web/src/lib/flowchart-layout.ts`  
+- `/Users/macbook/Workmap/apps/web/src/lib/flowchart-document.ts`  
+
+### 2026-10-22（Workmap：Flow map 时间轴可无限拖移）
+
+**User（提示词/原意）**  
+- 以时为颗粒时，空画布没有以当前时刻为中心，甚至拖不到当前时间。其他颗粒以当前为中心，但两头有边界，不能拖出去。空画布应以当前时间为中心，左右可无限拖移。有内容的画布记住上次退出时的画布中心。
+
+**Assistant（实现前说明）**  
+- 时间轴不再停在当天 0 点后固定十几个颗粒。空画布打开时把当前时刻放在视口中间，左右接近边缘就继续加时间。有任务的图记下视口中心，下次打开回到那里。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 已在「尊界666」的小时视图上看过：画布比视口宽，拖到左边缘时左侧时间会加长，拖到右边缘时右侧时间会加长，不会停在固定边界。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+- `/Users/macbook/Workmap/apps/web/src/lib/schedule-time.ts`  
+
+### 2026-10-22（Workmap：小时格子断开与点击落点）
+
+**User（提示词/原意）**  
+- 仍有问题：格子不连续，点击和拖放创建新节点也不知道到哪儿去了。
+
+**Assistant（实现前说明）**  
+- 左侧留白用了 padding，刻度和色块仍按 0 点坐标画，视口跨过留白时格子会断开，点击换算的时间也对不上。改成同一个时间原点：刻度、格子、色块、点击都用「原点分钟 + 像素」。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 已在 v543 的小时视图上看过：竖线间距连续，相邻大约 7–8 像素。在格子上点击新建，新任务左端离点击点约 4 像素（吸到该小时起点）。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+- `/Users/macbook/Workmap/apps/web/src/lib/flowchart-document.ts`  
+- `/Users/macbook/Workmap/apps/web/src/lib/map-view-align.ts`  
+
+### 2026-10-22（Workmap：小时颗粒按一小时画）
+
+**User（提示词/原意）**  
+- 小时颗粒时，点击或拖放创建的节点时间总比预期迟一小时，也无法拖放调整成一小时长度，似乎最短是 2 小时。
+
+**Assistant（实现前说明）**  
+- 正好一小时的任务被当成截止点，在小时视图里画成两小时，右端对齐到下一个整点。色块因此多占一小时，拖短也会停在两小时。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 小时视图里这条色块改为一小时宽，和指针下的那一格一致。最短可以拖成一小时。已在 v543 的小时视图上看过：新任务设定宽度等于相邻竖线的间距。测试任务已删除。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+- `/Users/macbook/Workmap/apps/web/src/lib/flowchart-layout.ts`  
+
+### 2026-10-22（Workmap：底栏说明与小时比例）
+
+**User（提示词/原意）**  
+- 参考 WBS map，精简底部操作说明，只留主要操作。没写在底栏上的，同样放进操作说明浮窗。小时颗粒的比例再放大一倍。
+
+**Assistant（实现前说明）**  
+- 底栏改成短句，工具栏加 Shortcuts。拖移、缩放、点击新建和拖改时间放进浮窗。小时档最大比例从大约两天铺满视口改为大约一天。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 底栏只留 Double-click、Enter、Tab、Delete、Arrows 和 @。Shortcuts 浮窗能打开，里面是其余操作。v543 小时视图竖线间距从约 7 像素变为约 15 像素。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+- `/Users/macbook/Workmap/apps/web/src/lib/schedule-time.ts`  
+
+### 2026-10-22（Workmap：画布内屏蔽浏览器前进后退）
+
+**User（提示词/原意）**  
+- 焦点在两种画布内时，需要屏蔽左右滚动（双指滑动）触发浏览器的前进后退导航。
+
+**Assistant（实现前说明）**  
+- 指针进入或焦点留在 WBS map、Flow map 画布时，取消横向滚轮的默认行为，并暂时禁止页面横向回弹。离开画布后恢复。画布平移仍使用这次滚动。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 已在 v543 的两块画布上看过：画布内横向滚轮会被拦住，侧栏上的不会。未 commit。
+
+**关联**  
+- `/Users/macbook/Workmap/apps/web/src/lib/block-history-swipe.ts`  
+- `/Users/macbook/Workmap/apps/web/src/pages/mind-map/MindMapEditorPage.tsx`  
+- `/Users/macbook/Workmap/apps/web/src/components/flowchart/FlowchartEditor.tsx`  
+
+
+### 2026-10-27（Vouchap：Expenses 同名 Payee 拆成两组）
+
+**User（提示词/原意）**  
+- vouchap 项目中，web 端同样的 entity，expenses 列表上出现了两组 payee。注：这个 space 的所有 costco 都 merge 成同一个 entity 了。截图：两个 “Costco Wholesale” 分组（75 / 3 receipts）。
+
+**Assistant（实现前说明）**  
+- Payee 分组键是 `getCanonicalEntityId`，不是显示名。怀疑列表加载 merge 解析后仍把部分小票留在子 entity id 上：`database.ts` 映射 raw join 时只读 `mergedIntoId`（漏 `merged_into_id`），且未把 `entity.id` / `entityId` 写成 resolve 后的 root；`getEntityMergeMap` 未翻页可能截断。拟在 `entities.ts` 增加 join/resolve 辅助，并修 receipts / inbound / outbound / invoices 列表映射。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 新增 `mapJoinedEntityRow`、`pickResolvedEntityForList`：列表行始终暴露 canonical root id。  
+- `getEntityMergeMap` 改为 `fetchAllPages`，避免 PostgREST ~1000 行静默截断导致部分 merge 未解析。  
+- `getReceiptsForListFirstPaint` / `getAllReceiptsForList` / `getAllReceipts` 及 inbound/outbound/invoices 列表同步改为 resolve 后写回 `entityId` + canonical `entity`。  
+- 验证：硬刷新 Expenses，按 Payee 分组并搜 cost，应只剩一组 Costco Wholesale（75+3）。若仍拆两组，再到 Entities 确认是否仍有两个未 merge 的根。未 commit。
+
+**关联**  
+- `vouchap-app/src/shared-logic/entities.ts`  
+- `vouchap-app/src/shared-logic/database.ts`  
+- `vouchap-app/src/shared-logic/inbound.ts` / `outbound.ts` / `invoices.ts`  
+- `vouchap-app/src/mobile-ui/app/receipts.tsx`（分组消费 `getCanonicalEntityId`）
+
+### 2026-10-27（Adaven-CRM：Wholestore Edge Function 非 2xx 复现）
+
+**User（提示词/原意）**  
+- CRM 中访问 wholestore，提示 Edge Function returned a non-2xx status code；其他应用正常。
+
+**Assistant（实现前说明）**  
+- 与 2026-10-03 同症状：Hub `product-ops` 对 Wholestore 调 `crm.space_orders` / `sku_edition`。先查 `authenticator.pgrst.db_schemas` 与 REST `Accept-Profile: crm`。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 实测 Wholestore REST：`spaces` 200；`crm.*` 返回 **PGRST106 Invalid schema: crm**，hint 仅 `public, graphql_public, provider, consumer`。  
+- `pg_roles.authenticator.rolconfig` 当时**没有** `pgrst.db_schemas`（迁移 `20261004034500` 仍标 applied，配置被平台重置清掉）。Portalflow 仍含 `crm`，故其他产品正常。  
+- 已现场重跑 GRANT + `ALTER ROLE authenticator SET pgrst.db_schemas = '... crm'` + NOTIFY；复查 orders/sku 200。  
+- 新增并 `db push`：`apps/wholestore-app/supabase/migrations/20261027210000_reassert_crm_postgrest_schemas.sql`；更新 APPLY.md / `038_expose_crm_postgrest.sql` 注释。刷新 CRM 选 Wholestore 即可。未改 CRM 前端，未 commit。
+
+**关联**  
+- `Adaven-platform/apps/wholestore-app/supabase/migrations/20261027210000_reassert_crm_postgrest_schemas.sql`  
+- `Adaven-platform/packages/db-platform/sql/038_expose_crm_postgrest.sql`  
+- `Adaven-CRM/supabase/functions/product-ops/index.ts`

@@ -2,7 +2,14 @@ import { supabase } from './supabase';
 import { Inbound, InboundItem, Sku } from '@/types';
 import { getCurrentUser } from './auth';
 import { getSkuById } from './skus';
-import { findOrCreateEntity, getEntityMergeMap, getEntityById, resolveEntityId } from './entities';
+import {
+  findOrCreateEntity,
+  getEntityMergeMap,
+  getEntityById,
+  resolveEntityId,
+  mapJoinedEntityRow,
+  pickResolvedEntityForList,
+} from './entities';
 
 function rowToInbound(row: any, items: InboundItem[] = []): Inbound {
   const entity = row.entities ? {
@@ -82,10 +89,11 @@ export async function getInboundForListFirstPaint(): Promise<Inbound[]> {
   for (const r of rows) {
     if (r.entity_id) {
       const resolvedId = resolveEntity(r.entity_id);
-      if (!r.entities || r.entities.id !== resolvedId) needResolved.add(resolvedId);
+      const joinedId = mapJoinedEntityRow(r.entities)?.id;
+      if (joinedId !== resolvedId) needResolved.add(resolvedId);
     }
   }
-  const resolvedEntityCache = new Map<string, Awaited<ReturnType<typeof getEntityById>>>();
+  const resolvedEntityCache = new Map<string, NonNullable<Awaited<ReturnType<typeof getEntityById>>>>();
   if (needResolved.size > 0) {
     await Promise.all(Array.from(needResolved).map(async (id) => {
       const e = await getEntityById(id);
@@ -94,8 +102,13 @@ export async function getInboundForListFirstPaint(): Promise<Inbound[]> {
   }
   return rows.map((r: any) => {
     const resolvedEntityId = r.entity_id ? resolveEntity(r.entity_id) : null;
-    const entityRow = (resolvedEntityId ? resolvedEntityCache.get(resolvedEntityId) : null) ?? r.entities;
-    const rc = { ...r, entities: entityRow, supplier_name: entityRow?.name ?? r.supplier_name };
+    const entityRow = pickResolvedEntityForList(resolvedEntityId, resolvedEntityCache, r.entities);
+    const rc = {
+      ...r,
+      entity_id: resolvedEntityId ?? r.entity_id,
+      entities: entityRow,
+      supplier_name: entityRow?.name ?? r.supplier_name,
+    };
     return rowToInbound(rc, []);
   });
 }
@@ -132,10 +145,11 @@ export async function getAllInbound(): Promise<Inbound[]> {
   for (const r of rows) {
     if (r.entity_id) {
       const resolvedId = resolveEntity(r.entity_id);
-      if (!r.entities || r.entities.id !== resolvedId) needResolved.add(resolvedId);
+      const joinedId = mapJoinedEntityRow(r.entities)?.id;
+      if (joinedId !== resolvedId) needResolved.add(resolvedId);
     }
   }
-  const resolvedEntityCache = new Map<string, Awaited<ReturnType<typeof getEntityById>>>();
+  const resolvedEntityCache = new Map<string, NonNullable<Awaited<ReturnType<typeof getEntityById>>>>();
   if (needResolved.size > 0) {
     await Promise.all(Array.from(needResolved).map(async (id) => {
       const e = await getEntityById(id);
@@ -144,8 +158,13 @@ export async function getAllInbound(): Promise<Inbound[]> {
   }
   return rows.map((r: any) => {
     const resolvedEntityId = r.entity_id ? resolveEntity(r.entity_id) : null;
-    const entityRow = (resolvedEntityId ? resolvedEntityCache.get(resolvedEntityId) : null) ?? r.entities;
-    const rc = { ...r, entities: entityRow, supplier_name: entityRow?.name ?? r.supplier_name };
+    const entityRow = pickResolvedEntityForList(resolvedEntityId, resolvedEntityCache, r.entities);
+    const rc = {
+      ...r,
+      entity_id: resolvedEntityId ?? r.entity_id,
+      entities: entityRow,
+      supplier_name: entityRow?.name ?? r.supplier_name,
+    };
     return rowToInbound(rc, []);
   });
 }

@@ -6,7 +6,15 @@ import { resolveTaxBreakdownTaxKindIds, shapeTaxBreakdownForDb } from './receipt
 import { getCurrentUser } from './auth';
 import { findCategoryByName } from './categories';
 import { findOrCreateAccount, getAccountMergeMap, getAccountById } from './accounts';
-import { updateEntity, getEntityMergeMap, getEntityById, resolveEntityId, findOrCreateEntity } from './entities';
+import {
+  updateEntity,
+  getEntityMergeMap,
+  getEntityById,
+  resolveEntityId,
+  findOrCreateEntity,
+  mapJoinedEntityRow,
+  pickResolvedEntityForList,
+} from './entities';
 import { getEntityOptionsForDuplicateCheck } from './entity-list';
 import { normalizeNameForCompare } from './name-utils';
 import { isMissingNestedAttributionEmbedError } from './postgrest-embed-errors';
@@ -602,12 +610,11 @@ export async function getReceiptsForListFirstPaint(): Promise<Receipt[]> {
   for (const row of rows) {
     if (row.entity_id) {
       const resolvedId = resolveEntity(row.entity_id);
-      const ent = (row as any).entities;
-      const joinedEntId = Array.isArray(ent) ? ent[0]?.id : ent?.id;
+      const joinedEntId = mapJoinedEntityRow((row as any).entities)?.id;
       if (joinedEntId !== resolvedId) needResolved.add(resolvedId);
     }
   }
-  const resolvedEntityCache = new Map<string, Awaited<ReturnType<typeof getEntityById>>>();
+  const resolvedEntityCache = new Map<string, NonNullable<Awaited<ReturnType<typeof getEntityById>>>>();
   if (needResolved.size > 0) {
     await Promise.all(Array.from(needResolved).map(async (id) => {
       const e = await getEntityById(id);
@@ -616,15 +623,15 @@ export async function getReceiptsForListFirstPaint(): Promise<Receipt[]> {
   }
   return rows.map((row: any) => {
     const resolvedEntityId = row.entity_id ? resolveEntity(row.entity_id) : null;
-    const entityRow = (resolvedEntityId ? resolvedEntityCache.get(resolvedEntityId) : null) ?? row.entities;
-    const payeeName = entityRow?.name || '';
+    const entity = pickResolvedEntityForList(resolvedEntityId, resolvedEntityCache, row.entities);
+    const payeeName = entity?.name || '';
     return {
     id: row.id,
     spaceId: row.space_id,
     supplierName: payeeName,
     storeName: payeeName,
-    entityId: row.entity_id ?? undefined,
-    entity: entityRow ? { id: entityRow.id, spaceId: row.space_id, name: entityRow.name, isAiRecognized: false } : undefined,
+    entityId: resolvedEntityId ?? undefined,
+    entity: entity ? { id: entity.id, spaceId: entity.spaceId || row.space_id, name: entity.name, isAiRecognized: false } : undefined,
     totalAmount: row.total_amount,
     currency: row.currency,
     tax: row.tax,
@@ -716,8 +723,7 @@ export async function getAllReceiptsForList(): Promise<Receipt[]> {
     for (const row of rows) {
       if (row.entity_id) {
         const resolvedId = resolveEntity(row.entity_id);
-        const ent = (row as any).entities;
-        const joinedEntId = Array.isArray(ent) ? ent[0]?.id : ent?.id;
+        const joinedEntId = mapJoinedEntityRow((row as any).entities)?.id;
         if (joinedEntId !== resolvedId) needResolvedEntity.add(resolvedId);
       }
       if (row.account_id) {
@@ -730,13 +736,13 @@ export async function getAllReceiptsForList(): Promise<Receipt[]> {
 
     const [resolvedEntityCache, resolvedAccountCache] = await Promise.all([
       needResolvedEntity.size > 0 ? (async () => {
-        const m = new Map<string, Awaited<ReturnType<typeof getEntityById>>>();
+        const m = new Map<string, NonNullable<Awaited<ReturnType<typeof getEntityById>>>>();
         await Promise.all(Array.from(needResolvedEntity).map(async (id) => {
           const e = await getEntityById(id);
           if (e) m.set(id, e);
         }));
         return m;
-      })() : Promise.resolve(new Map()),
+      })() : Promise.resolve(new Map<string, NonNullable<Awaited<ReturnType<typeof getEntityById>>>>()),
       needResolvedAccount.size > 0 ? (async () => {
         const m = new Map<string, Awaited<ReturnType<typeof getAccountById>>>();
         await Promise.all(Array.from(needResolvedAccount).map(async (id) => {
@@ -750,27 +756,29 @@ export async function getAllReceiptsForList(): Promise<Receipt[]> {
     const mappedReceipts = rows.map((row: any) => {
       const resolvedEntityId = row.entity_id ? resolveEntity(row.entity_id) : null;
       const resolvedAccountId = row.account_id ? resolveAccount(row.account_id) : null;
-      const entityRow = (resolvedEntityId ? resolvedEntityCache.get(resolvedEntityId) : null) ?? row.entities;
+      const entity = pickResolvedEntityForList(resolvedEntityId, resolvedEntityCache, row.entities);
       const accountRow = (resolvedAccountId ? resolvedAccountCache.get(resolvedAccountId) : null) ?? row.accounts;
-      const payeeName = entityRow?.name ?? '';
+      const payeeName = entity?.name ?? '';
       return {
         id: row.id,
         spaceId: row.space_id,
         supplierName: payeeName,
         storeName: payeeName,
-        entityId: row.entity_id ?? undefined,
-        entity: entityRow ? {
-          id: entityRow.id,
-          spaceId: entityRow.spaceId,
-          name: entityRow.name,
-          taxNumber: entityRow.taxNumber,
-          phone: entityRow.phone,
-          address: entityRow.address,
-          isAiRecognized: entityRow.isAiRecognized,
-          mergedIntoId: entityRow.mergedIntoId,
-          createdAt: entityRow.createdAt,
-          updatedAt: entityRow.updatedAt,
-        } : undefined,
+        entityId: resolvedEntityId ?? undefined,
+        entity: entity
+          ? {
+              id: entity.id,
+              spaceId: entity.spaceId,
+              name: entity.name,
+              taxNumber: entity.taxNumber,
+              phone: entity.phone,
+              address: entity.address,
+              isAiRecognized: entity.isAiRecognized,
+              mergedIntoId: entity.mergedIntoId,
+              createdAt: entity.createdAt,
+              updatedAt: entity.updatedAt,
+            }
+          : undefined,
         totalAmount: row.total_amount,
         currency: row.currency,
         tax: row.tax,
@@ -916,8 +924,7 @@ export async function getAllReceipts(): Promise<Receipt[]> {
     for (const row of rows) {
       if (row.entity_id) {
         const resolvedId = resolveEntity(row.entity_id);
-        const ent = (row as any).entities;
-        const joinedEntId = Array.isArray(ent) ? ent[0]?.id : ent?.id;
+        const joinedEntId = mapJoinedEntityRow((row as any).entities)?.id;
         if (joinedEntId !== resolvedId) needResolvedEntity.add(resolvedId);
       }
       if (row.account_id) {
@@ -929,13 +936,13 @@ export async function getAllReceipts(): Promise<Receipt[]> {
     }
     const [resolvedEntityCache, resolvedAccountCache] = await Promise.all([
       needResolvedEntity.size > 0 ? (async () => {
-        const m = new Map<string, Awaited<ReturnType<typeof getEntityById>>>();
+        const m = new Map<string, NonNullable<Awaited<ReturnType<typeof getEntityById>>>>();
         await Promise.all(Array.from(needResolvedEntity).map(async (id) => {
           const e = await getEntityById(id);
           if (e) m.set(id, e);
         }));
         return m;
-      })() : Promise.resolve(new Map()),
+      })() : Promise.resolve(new Map<string, NonNullable<Awaited<ReturnType<typeof getEntityById>>>>()),
       needResolvedAccount.size > 0 ? (async () => {
         const m = new Map<string, Awaited<ReturnType<typeof getAccountById>>>();
         await Promise.all(Array.from(needResolvedAccount).map(async (id) => {
@@ -949,27 +956,29 @@ export async function getAllReceipts(): Promise<Receipt[]> {
     const mappedReceipts = rows.map((row: any) => {
       const resolvedEntityId = row.entity_id ? resolveEntity(row.entity_id) : null;
       const resolvedAccountId = row.account_id ? resolveAccount(row.account_id) : null;
-      const entityRow = (resolvedEntityId ? resolvedEntityCache.get(resolvedEntityId) : null) ?? row.entities;
+      const entity = pickResolvedEntityForList(resolvedEntityId, resolvedEntityCache, row.entities);
       const accountRow = (resolvedAccountId ? resolvedAccountCache.get(resolvedAccountId) : null) ?? row.accounts;
-      const payeeName = entityRow?.name ?? '';
+      const payeeName = entity?.name ?? '';
       return {
         id: row.id,
         spaceId: row.space_id,
         supplierName: payeeName,
         storeName: payeeName,
-        entityId: row.entity_id ?? undefined,
-        entity: entityRow ? {
-          id: entityRow.id,
-          spaceId: entityRow.spaceId,
-          name: entityRow.name,
-          taxNumber: entityRow.taxNumber,
-          phone: entityRow.phone,
-          address: entityRow.address,
-          isAiRecognized: entityRow.isAiRecognized,
-          mergedIntoId: entityRow.mergedIntoId,
-          createdAt: entityRow.createdAt,
-          updatedAt: entityRow.updatedAt,
-        } : undefined,
+        entityId: resolvedEntityId ?? undefined,
+        entity: entity
+          ? {
+              id: entity.id,
+              spaceId: entity.spaceId,
+              name: entity.name,
+              taxNumber: entity.taxNumber,
+              phone: entity.phone,
+              address: entity.address,
+              isAiRecognized: entity.isAiRecognized,
+              mergedIntoId: entity.mergedIntoId,
+              createdAt: entity.createdAt,
+              updatedAt: entity.updatedAt,
+            }
+          : undefined,
         totalAmount: row.total_amount,
         currency: row.currency,
         tax: row.tax,

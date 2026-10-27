@@ -2,6 +2,7 @@ import { supabase } from './supabase';
 import { Entity } from '@/types';
 import { getCurrentUser } from './auth';
 import { normalizeNameForCompare } from './name-utils';
+import { fetchAllPages } from './supabase-paging';
 
 const TABLE = 'entities';
 
@@ -18,6 +19,58 @@ function mapRow(row: any): Entity {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+}
+
+/** Normalize PostgREST `entities` embed (object or 1-element array) to Entity (snake/camel both OK). */
+export function mapJoinedEntityRow(raw: any): Entity | null {
+  if (raw == null) return null;
+  const row = Array.isArray(raw) ? raw[0] : raw;
+  if (!row || !row.id) return null;
+  return mapRow({
+    id: row.id,
+    space_id: row.space_id ?? row.spaceId,
+    name: row.name,
+    tax_number: row.tax_number ?? row.taxNumber,
+    phone: row.phone,
+    address: row.address,
+    is_ai_recognized: row.is_ai_recognized ?? row.isAiRecognized,
+    merged_into_id: row.merged_into_id ?? row.mergedIntoId ?? null,
+    created_at: row.created_at ?? row.createdAt,
+    updated_at: row.updated_at ?? row.updatedAt,
+  });
+}
+
+/**
+ * List-row entity after merge resolution.
+ * Always exposes the canonical root id so Payee grouping via getCanonicalEntityId stays stable
+ * even when the join still points at a merged child or getEntityById cache misses.
+ */
+export function pickResolvedEntityForList(
+  resolvedEntityId: string | null | undefined,
+  resolvedCache: Map<string, Entity>,
+  joinedRaw: any,
+): Entity | undefined {
+  const joined = mapJoinedEntityRow(joinedRaw);
+  const cached = resolvedEntityId ? resolvedCache.get(resolvedEntityId) : undefined;
+  const base = cached ?? joined ?? undefined;
+  if (!base) {
+    if (!resolvedEntityId) return undefined;
+    return {
+      id: resolvedEntityId,
+      spaceId: '',
+      name: '',
+      isAiRecognized: false,
+    };
+  }
+  if (resolvedEntityId) {
+    return {
+      ...base,
+      id: resolvedEntityId,
+      // Root is already resolved; clear pointer so getCanonicalEntityId returns id.
+      mergedIntoId: undefined,
+    };
+  }
+  return base;
 }
 
 /** 获取当前空间所有关联方（仅未被合并的，用于管理列表） */
@@ -335,7 +388,19 @@ export async function getEntitiesForMergeHistory(): Promise<EntitiesMergeHistory
 }
 
 export async function getEntityMergeMap(spaceId: string): Promise<Map<string, string>> {
-  const { data: rows } = await supabase.from(TABLE).select('id, merged_into_id').eq('space_id', spaceId).not('merged_into_id', 'is', null);
+  // Must page: PostgREST silently truncates at max-rows (~1000); incomplete map → duplicate Payee groups.
+  const { data: rows, error } = await fetchAllPages<any>((from, to) =>
+    supabase
+      .from(TABLE)
+      .select('id, merged_into_id')
+      .eq('space_id', spaceId)
+      .not('merged_into_id', 'is', null)
+      .order('id', { ascending: true })
+      .range(from, to),
+  );
+  if (error) {
+    console.warn('[getEntityMergeMap] failed to load full merge map:', error);
+  }
   const map = new Map<string, string>();
   (rows || []).forEach((r: any) => {
     if (r.id && r.merged_into_id) map.set(r.id, r.merged_into_id);
@@ -360,8 +425,10 @@ export function getCanonicalEntityId(record?: {
   entity?: { id?: string; mergedIntoId?: string | null } | null;
 } | null): string | null {
   if (!record) return null;
+  // Prefer merge pointer on the joined/child row (one hop; list load should pre-resolve chains).
   const merged = record.entity?.mergedIntoId;
   if (merged) return merged;
+  // List load sets entity.id to the resolved root when possible.
   if (record.entity?.id) return record.entity.id;
   return record.entityId ?? null;
 }
