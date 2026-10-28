@@ -31,6 +31,11 @@ import { showToast } from '@/lib/toast';
 import { confirmDestructive } from '@/lib/alertWeb';
 import WebChatFab, { WEB_CHAT_FAB_BOTTOM, WEB_CHAT_FAB_RIGHT, WEB_CHAT_FAB_SIZE } from '@/components/WebChatFab';
 import DataTable, { WEB_POPOVER } from '@/components/DataTable';
+import RecordDateRangeFields, {
+  EMPTY_RECORD_DATE_RANGE,
+  matchesRecordDateRange,
+  recordDateFilterCount,
+} from '@/components/RecordDateRangeFilter';
 import { getInvoiceColumns } from '@/components/voucher-table-columns';
 import { isMobileWebWidth } from '../lib/web-viewport';
 import { preflightRecognitionOrAlert } from '@/lib/recognition-preflight-ui';
@@ -99,7 +104,7 @@ export default function InvoicesScreen() {
   const [groupPopoverRect, setGroupPopoverRect] = useState<{ left: number; top: number } | null>(null);
   const [filterPopoverRect, setFilterPopoverRect] = useState<{ left: number; top: number } | null>(null);
   const [selectedMonths, setSelectedMonths] = useState<Set<string>>(new Set());
-  const [selectedRecordDates, setSelectedRecordDates] = useState<Set<string>>(new Set());
+  const [recordDateRange, setRecordDateRange] = useState(EMPTY_RECORD_DATE_RANGE);
   const [selectedAccounts, setSelectedAccounts] = useState<Set<string>>(new Set());
   const [selectedCreators, setSelectedCreators] = useState<Set<string>>(new Set());
   const [filterSubMenu, setFilterSubMenu] = useState<'main' | 'month' | 'recordDate' | 'account' | 'creator'>('main');
@@ -451,14 +456,7 @@ export default function InvoicesScreen() {
         } catch { return false; }
       });
     }
-    if (selectedRecordDates.size > 0) {
-      filtered = filtered.filter(inv => {
-        if (!inv.createdAt) return false;
-        const d = new Date(inv.createdAt);
-        const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        return selectedRecordDates.has(k);
-      });
-    }
+    filtered = filtered.filter(inv => matchesRecordDateRange(inv.createdAt, recordDateRange));
     if (selectedAccounts.size > 0) {
       filtered = filtered.filter(inv => selectedAccounts.has(inv.account?.id || 'none'));
     }
@@ -466,7 +464,7 @@ export default function InvoicesScreen() {
       filtered = filtered.filter(inv => selectedCreators.has(inv.createdBy || 'unknown'));
     }
     return filtered;
-  }, [invoices, selectedMonths, selectedRecordDates, selectedAccounts, selectedCreators]);
+  }, [invoices, selectedMonths, recordDateRange, selectedAccounts, selectedCreators]);
 
   const searchedInvoices = useMemo(() => {
     if (!searchQuery.trim()) return filteredInvoices;
@@ -483,7 +481,6 @@ export default function InvoicesScreen() {
 
   const filterOptions = useMemo(() => {
     const months = new Set<string>();
-    const recordDates = new Set<string>();
     const accounts = new Map<string, string>();
     const creators = new Map<string, string>();
     invoices.forEach(inv => {
@@ -491,10 +488,6 @@ export default function InvoicesScreen() {
         const d = parseLocalDate(inv.date);
         months.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
       } catch {}
-      if (inv.createdAt) {
-        const d = new Date(inv.createdAt);
-        recordDates.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
-      }
       accounts.set(inv.account?.id || 'none', inv.account?.name || 'Not Set');
       if (inv.createdBy) {
         const name = inv.createdByUser?.name || inv.createdByUser?.email?.split('@')[0] || 'Unknown';
@@ -502,15 +495,10 @@ export default function InvoicesScreen() {
       } else creators.set('unknown', 'Unknown');
     });
     const sortedMonths = Array.from(months).sort((a, b) => b.localeCompare(a));
-    const sortedRecordDates = Array.from(recordDates).sort((a, b) => b.localeCompare(a));
     return {
       months: sortedMonths.map(k => {
         const [y, m] = k.split('-');
         return { key: k, label: format(new Date(parseInt(y), parseInt(m) - 1), 'MMMM yyyy') };
-      }),
-      recordDates: sortedRecordDates.map(k => {
-        const [y, m, d] = k.split('-');
-        return { key: k, label: format(new Date(parseInt(y), parseInt(m) - 1, parseInt(d)), 'MMM dd, yyyy') };
       }),
       accounts: Array.from(accounts.entries()).map(([id, name]) => ({ id, name })),
       creators: Array.from(creators.entries()).map(([id, name]) => ({ id, name })),
@@ -702,8 +690,8 @@ export default function InvoicesScreen() {
                 <TouchableOpacity style={styles.filterButton} onPress={() => { setShowFilterMenu(true); setFilterSubMenu('main'); }}>
                   <Text style={styles.filterText}>
                     Filter
-                    {(selectedMonths.size + selectedRecordDates.size + selectedAccounts.size + selectedCreators.size) > 0 && (
-                      <Text style={styles.filterBadge}> ({selectedMonths.size + selectedRecordDates.size + selectedAccounts.size + selectedCreators.size})</Text>
+                    {(selectedMonths.size + recordDateFilterCount(recordDateRange) + selectedAccounts.size + selectedCreators.size) > 0 && (
+                      <Text style={styles.filterBadge}> ({selectedMonths.size + recordDateFilterCount(recordDateRange) + selectedAccounts.size + selectedCreators.size})</Text>
                     )}
                   </Text>
                   <Ionicons name="chevron-down" size={16} color="#636E72" />
@@ -1018,10 +1006,10 @@ export default function InvoicesScreen() {
                 </TouchableOpacity>
               ) : null}
               <Text style={styles.pickerTitle}>
-                {filterSubMenu === 'main' ? 'Filter' : filterSubMenu === 'month' ? 'Transaction Months' : filterSubMenu === 'recordDate' ? 'Record Dates' : filterSubMenu === 'account' ? 'Accounts' : 'Recorders'}
+                {filterSubMenu === 'main' ? 'Filter' : filterSubMenu === 'month' ? 'Transaction Months' : filterSubMenu === 'recordDate' ? 'Record Date' : filterSubMenu === 'account' ? 'Accounts' : 'Recorders'}
               </Text>
-              {(filterSubMenu === 'main' && (selectedMonths.size > 0 || selectedRecordDates.size > 0 || selectedAccounts.size > 0 || selectedCreators.size > 0)) && (
-                <TouchableOpacity onPress={() => { setSelectedMonths(new Set()); setSelectedRecordDates(new Set()); setSelectedAccounts(new Set()); setSelectedCreators(new Set()); }} style={styles.clearFilterButton}>
+              {(filterSubMenu === 'main' && (selectedMonths.size > 0 || recordDateFilterCount(recordDateRange) > 0 || selectedAccounts.size > 0 || selectedCreators.size > 0)) && (
+                <TouchableOpacity onPress={() => { setSelectedMonths(new Set()); setRecordDateRange(EMPTY_RECORD_DATE_RANGE); setSelectedAccounts(new Set()); setSelectedCreators(new Set()); }} style={styles.clearFilterButton}>
                   <Text style={styles.clearFilterText}>Clear</Text>
                 </TouchableOpacity>
               )}
@@ -1049,7 +1037,7 @@ export default function InvoicesScreen() {
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.filterMainOption} onPress={() => setFilterSubMenu('recordDate')}>
                     <Text style={styles.filterMainOptionText}>Record Date</Text>
-                    {selectedRecordDates.size > 0 && <Text style={styles.filterCountBadge}>{selectedRecordDates.size}</Text>}
+                    {recordDateFilterCount(recordDateRange) > 0 && <Text style={styles.filterCountBadge}>{recordDateFilterCount(recordDateRange)}</Text>}
                     <Ionicons name="chevron-forward" size={20} color="#95A5A6" />
                   </TouchableOpacity>
                 </>
@@ -1063,15 +1051,9 @@ export default function InvoicesScreen() {
                   </TouchableOpacity>
                 );
               })}
-              {filterSubMenu === 'recordDate' && filterOptions.recordDates.map((d) => {
-                const isSelected = selectedRecordDates.has(d.key);
-                return (
-                  <TouchableOpacity key={d.key} style={[styles.pickerOption, isSelected && styles.pickerOptionSelected]} onPress={() => setSelectedRecordDates(prev => { const s = new Set(prev); if (s.has(d.key)) s.delete(d.key); else s.add(d.key); return s; })}>
-                    <Text style={[styles.pickerOptionText, isSelected && styles.pickerOptionTextSelected]}>{d.label}</Text>
-                    {isSelected && <Ionicons name="checkmark" size={20} color="#6C5CE7" />}
-                  </TouchableOpacity>
-                );
-              })}
+              {filterSubMenu === 'recordDate' && (
+                <RecordDateRangeFields value={recordDateRange} onChange={setRecordDateRange} />
+              )}
               {filterSubMenu === 'account' && filterOptions.accounts.map((a) => {
                 const isSelected = selectedAccounts.has(a.id);
                 return (
@@ -1113,8 +1095,8 @@ export default function InvoicesScreen() {
             ) : (
               <>
                 <Text style={{ fontSize: 13, fontWeight: '600', color: '#495057' }}>Filter</Text>
-                {(selectedMonths.size > 0 || selectedRecordDates.size > 0 || selectedAccounts.size > 0 || selectedCreators.size > 0) && (
-                  <TouchableOpacity onPress={() => { setSelectedMonths(new Set()); setSelectedRecordDates(new Set()); setSelectedAccounts(new Set()); setSelectedCreators(new Set()); }} style={{ padding: 4 }}><Text style={{ fontSize: 13, color: '#6C5CE7' }}>Clear</Text></TouchableOpacity>
+                {(selectedMonths.size > 0 || recordDateFilterCount(recordDateRange) > 0 || selectedAccounts.size > 0 || selectedCreators.size > 0) && (
+                  <TouchableOpacity onPress={() => { setSelectedMonths(new Set()); setRecordDateRange(EMPTY_RECORD_DATE_RANGE); setSelectedAccounts(new Set()); setSelectedCreators(new Set()); }} style={{ padding: 4 }}><Text style={{ fontSize: 13, color: '#6C5CE7' }}>Clear</Text></TouchableOpacity>
                 )}
               </>
             )}
@@ -1125,7 +1107,7 @@ export default function InvoicesScreen() {
                 <TouchableOpacity style={[styles.filterMainOption, { marginBottom: 4, minHeight: 40, lineHeight: 20 }]} onPress={() => setFilterSubMenu('month')}><Text style={[styles.filterMainOptionText, { fontSize: 13, lineHeight: 20 }]}>Transaction Month</Text>{selectedMonths.size > 0 && <Text style={[styles.filterCountBadge, { fontSize: 12 }]}>{selectedMonths.size}</Text>}<Ionicons name="chevron-forward" size={20} color="#95A5A6" /></TouchableOpacity>
                 <TouchableOpacity style={[styles.filterMainOption, { marginBottom: 4, minHeight: 40, lineHeight: 20 }]} onPress={() => setFilterSubMenu('account')}><Text style={[styles.filterMainOptionText, { fontSize: 13, lineHeight: 20 }]}>Account</Text>{selectedAccounts.size > 0 && <Text style={[styles.filterCountBadge, { fontSize: 12 }]}>{selectedAccounts.size}</Text>}<Ionicons name="chevron-forward" size={20} color="#95A5A6" /></TouchableOpacity>
                 <TouchableOpacity style={[styles.filterMainOption, { marginBottom: 4, minHeight: 40, lineHeight: 20 }]} onPress={() => setFilterSubMenu('creator')}><Text style={[styles.filterMainOptionText, { fontSize: 13, lineHeight: 20 }]}>Recorder</Text>{selectedCreators.size > 0 && <Text style={[styles.filterCountBadge, { fontSize: 12 }]}>{selectedCreators.size}</Text>}<Ionicons name="chevron-forward" size={20} color="#95A5A6" /></TouchableOpacity>
-                <TouchableOpacity style={[styles.filterMainOption, { minHeight: 40, lineHeight: 20 }]} onPress={() => setFilterSubMenu('recordDate')}><Text style={[styles.filterMainOptionText, { fontSize: 13, lineHeight: 20 }]}>Record Date</Text>{selectedRecordDates.size > 0 && <Text style={[styles.filterCountBadge, { fontSize: 12 }]}>{selectedRecordDates.size}</Text>}<Ionicons name="chevron-forward" size={20} color="#95A5A6" /></TouchableOpacity>
+                <TouchableOpacity style={[styles.filterMainOption, { minHeight: 40, lineHeight: 20 }]} onPress={() => setFilterSubMenu('recordDate')}><Text style={[styles.filterMainOptionText, { fontSize: 13, lineHeight: 20 }]}>Record Date</Text>{recordDateFilterCount(recordDateRange) > 0 && <Text style={[styles.filterCountBadge, { fontSize: 12 }]}>{recordDateFilterCount(recordDateRange)}</Text>}<Ionicons name="chevron-forward" size={20} color="#95A5A6" /></TouchableOpacity>
               </>
             )}
             {filterSubMenu === 'month' && filterOptions.months.map((m: { key: string; label: string }) => {
@@ -1137,15 +1119,9 @@ export default function InvoicesScreen() {
                 </TouchableOpacity>
               );
             })}
-            {filterSubMenu === 'recordDate' && filterOptions.recordDates.map((d: { key: string; label: string }) => {
-              const isSelected = selectedRecordDates.has(d.key);
-              return (
-                <TouchableOpacity key={d.key} style={[styles.pickerOption, isSelected && styles.pickerOptionSelected, { minHeight: 40, lineHeight: 20 }]} onPress={() => setSelectedRecordDates(prev => { const s = new Set(prev); if (s.has(d.key)) s.delete(d.key); else s.add(d.key); return s; })}>
-                  <Text style={[styles.pickerOptionText, isSelected && styles.pickerOptionTextSelected, { fontSize: 13, lineHeight: 20 }]}>{d.label}</Text>
-                  {isSelected && <Ionicons name="checkmark" size={20} color="#6C5CE7" />}
-                </TouchableOpacity>
-              );
-            })}
+            {filterSubMenu === 'recordDate' && (
+              <RecordDateRangeFields value={recordDateRange} onChange={setRecordDateRange} />
+            )}
             {filterSubMenu === 'account' && filterOptions.accounts.map((a: { id: string; name: string }) => {
               const isSelected = selectedAccounts.has(a.id);
               return (

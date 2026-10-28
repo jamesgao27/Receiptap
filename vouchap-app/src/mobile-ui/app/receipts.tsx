@@ -37,6 +37,11 @@ import { showToast } from '@/lib/toast';
 import { confirmThen, confirmDestructive } from '@/lib/alertWeb';
 import WebChatFab, { WEB_CHAT_FAB_BOTTOM, WEB_CHAT_FAB_RIGHT, WEB_CHAT_FAB_SIZE } from '@/components/WebChatFab';
 import DataTable, { WEB_POPOVER } from '@/components/DataTable';
+import RecordDateRangeFields, {
+  EMPTY_RECORD_DATE_RANGE,
+  matchesRecordDateRange,
+  recordDateFilterCount,
+} from '@/components/RecordDateRangeFilter';
 import { getReceiptColumns } from '@/components/voucher-table-columns';
 import { isMobileWebWidth } from '../lib/web-viewport';
 import { inputTypeConfirmBadgeIonicon } from '@/lib/input-type-ionicon';
@@ -190,8 +195,8 @@ export default function ReceiptsScreen() {
   const [filterPopoverRect, setFilterPopoverRect] = useState<{ left: number; top: number } | null>(null);
   // 交易时间（月维度：YYYY-MM）
   const [selectedMonths, setSelectedMonths] = useState<Set<string>>(new Set());
-  // 记录时间（日维度：YYYY-MM-DD）
-  const [selectedRecordDates, setSelectedRecordDates] = useState<Set<string>>(new Set());
+  // 记录时间：自定义日期区间（含首尾，本地日历日）
+  const [recordDateRange, setRecordDateRange] = useState(EMPTY_RECORD_DATE_RANGE);
   const [selectedAccounts, setSelectedAccounts] = useState<Set<string>>(new Set());
   const [selectedCreators, setSelectedCreators] = useState<Set<string>>(new Set());
   const [filterSubMenu, setFilterSubMenu] = useState<'main' | 'month' | 'recordDate' | 'account' | 'creator'>('main');
@@ -920,22 +925,7 @@ export default function ReceiptsScreen() {
       });
     }
 
-    // 按记录时间（创建时间，按天）筛选
-    if (selectedRecordDates.size > 0) {
-      filtered = filtered.filter(receipt => {
-        if (!receipt.createdAt) return false;
-        try {
-          const createdAt = new Date(receipt.createdAt);
-          const year = createdAt.getFullYear();
-          const month = String(createdAt.getMonth() + 1).padStart(2, '0');
-          const day = String(createdAt.getDate()).padStart(2, '0');
-          const dayKey = `${year}-${month}-${day}`;
-          return selectedRecordDates.has(dayKey);
-        } catch {
-          return false;
-        }
-      });
-    }
+    filtered = filtered.filter(receipt => matchesRecordDateRange(receipt.createdAt, recordDateRange));
 
     // 按账户筛选
     if (selectedAccounts.size > 0) {
@@ -954,12 +944,11 @@ export default function ReceiptsScreen() {
     }
 
     return filtered;
-  }, [receipts, selectedMonths, selectedAccounts, selectedCreators]);
+  }, [receipts, selectedMonths, recordDateRange, selectedAccounts, selectedCreators]);
 
   // 获取所有可用的筛选选项
   const filterOptions = useMemo(() => {
     const months = new Set<string>(); // 交易时间（月）
-    const recordDates = new Set<string>(); // 记录时间（天）
     const accounts = new Map<string, string>(); // id -> name
     const creators = new Map<string, string>(); // id -> name
 
@@ -970,18 +959,6 @@ export default function ReceiptsScreen() {
         const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
         months.add(monthKey);
       } catch {}
-
-      // 记录时间（天）
-      if (receipt.createdAt) {
-        try {
-          const createdAt = new Date(receipt.createdAt);
-          const year = createdAt.getFullYear();
-          const month = String(createdAt.getMonth() + 1).padStart(2, '0');
-          const day = String(createdAt.getDate()).padStart(2, '0');
-          const dayKey = `${year}-${month}-${day}`;
-          recordDates.add(dayKey);
-        } catch {}
-      }
 
       // 账户
       if (receipt.account) {
@@ -1001,8 +978,6 @@ export default function ReceiptsScreen() {
 
     // 将月份转换为排序后的数组
     const sortedMonths = Array.from(months).sort((a, b) => b.localeCompare(a));
-    // 将记录时间（天）转换为排序后的数组
-    const sortedRecordDates = Array.from(recordDates).sort((a, b) => b.localeCompare(a));
 
     return {
       months: sortedMonths.map(monthKey => {
@@ -1011,14 +986,6 @@ export default function ReceiptsScreen() {
         return {
           key: monthKey,
           label: format(date, 'MMMM yyyy'),
-        };
-      }),
-      recordDates: sortedRecordDates.map(dayKey => {
-        const [year, month, day] = dayKey.split('-');
-        const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-        return {
-          key: dayKey,
-          label: format(date, 'MMM dd, yyyy'),
         };
       }),
       accounts: Array.from(accounts.entries()).map(([id, name]) => ({ id, name })),
@@ -1247,8 +1214,8 @@ export default function ReceiptsScreen() {
                 <TouchableOpacity style={styles.filterButton} onPress={() => { setShowFilterMenu(true); setFilterSubMenu('main'); }}>
                   <Text style={styles.filterText}>
                     Filter
-                    {(selectedMonths.size > 0 || selectedRecordDates.size > 0 || selectedAccounts.size > 0 || selectedCreators.size > 0) && (
-                      <Text style={styles.filterBadge}> ({selectedMonths.size + selectedRecordDates.size + selectedAccounts.size + selectedCreators.size})</Text>
+                    {(selectedMonths.size > 0 || recordDateFilterCount(recordDateRange) > 0 || selectedAccounts.size > 0 || selectedCreators.size > 0) && (
+                      <Text style={styles.filterBadge}> ({selectedMonths.size + recordDateFilterCount(recordDateRange) + selectedAccounts.size + selectedCreators.size})</Text>
                     )}
                   </Text>
                   <Ionicons name="chevron-down" size={16} color="#636E72" />
@@ -1852,11 +1819,11 @@ export default function ReceiptsScreen() {
                 <>
                   <Text style={styles.pickerTitle}>Filter</Text>
                   <View style={styles.pickerHeaderRight}>
-                    {(selectedMonths.size > 0 || selectedRecordDates.size > 0 || selectedAccounts.size > 0 || selectedCreators.size > 0) && (
+                    {(selectedMonths.size > 0 || recordDateFilterCount(recordDateRange) > 0 || selectedAccounts.size > 0 || selectedCreators.size > 0) && (
                       <TouchableOpacity
                         onPress={() => {
                           setSelectedMonths(new Set());
-                          setSelectedRecordDates(new Set());
+                          setRecordDateRange(EMPTY_RECORD_DATE_RANGE);
                           setSelectedAccounts(new Set());
                           setSelectedCreators(new Set());
                         }}
@@ -1886,7 +1853,7 @@ export default function ReceiptsScreen() {
                   </TouchableOpacity>
                   <Text style={styles.pickerTitle}>
                     {filterSubMenu === 'month' && 'Select Transaction Months'}
-                    {filterSubMenu === 'recordDate' && 'Select Record Dates'}
+                    {filterSubMenu === 'recordDate' && 'Record Date'}
                     {filterSubMenu === 'account' && 'Select Accounts'}
                     {filterSubMenu === 'creator' && 'Select Recorders'}
                   </Text>
@@ -1960,8 +1927,8 @@ export default function ReceiptsScreen() {
                       <Text style={styles.filterMainOptionText}>Record Date</Text>
                     </View>
                     <View style={styles.filterMainOptionRight}>
-                      {selectedRecordDates.size > 0 && (
-                        <Text style={styles.filterCountBadge}>{selectedRecordDates.size}</Text>
+                      {recordDateFilterCount(recordDateRange) > 0 && (
+                        <Text style={styles.filterCountBadge}>{recordDateFilterCount(recordDateRange)}</Text>
                       )}
                       <Ionicons name="chevron-forward" size={20} color="#95A5A6" />
                     </View>
@@ -2017,54 +1984,7 @@ export default function ReceiptsScreen() {
                   })}
                 </>
               ) : filterSubMenu === 'recordDate' ? (
-                <>
-                  {/* 记录时间（按天）子菜单 */}
-                  {filterOptions.recordDates.map(day => {
-                    const isSelected = selectedRecordDates.has(day.key);
-                    return (
-                      <TouchableOpacity
-                        key={day.key}
-                        style={[
-                          styles.pickerOption,
-                          isSelected && styles.pickerOptionSelected,
-                        ]}
-                        onPress={() => {
-                          setSelectedRecordDates(prev => {
-                            const newSet = new Set(prev);
-                            if (newSet.has(day.key)) {
-                              newSet.delete(day.key);
-                            } else {
-                              newSet.add(day.key);
-                            }
-                            return newSet;
-                          });
-                        }}
-                      >
-                        <View style={styles.filterOptionLeft}>
-                          <View style={[
-                            styles.filterCheckbox,
-                            isSelected && styles.filterCheckboxSelected,
-                          ]}>
-                            {isSelected && (
-                              <Ionicons name="checkmark" size={14} color="#fff" />
-                            )}
-                          </View>
-                          <Text
-                            style={[
-                              styles.pickerOptionText,
-                              isSelected && styles.pickerOptionTextSelected,
-                            ]}
-                          >
-                            {day.label}
-                          </Text>
-                        </View>
-                        {isSelected && (
-                          <Ionicons name="checkmark" size={20} color="#6C5CE7" />
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </>
+                <RecordDateRangeFields value={recordDateRange} onChange={setRecordDateRange} />
               ) : filterSubMenu === 'account' ? (
                 <>
                   {/* 账户子菜单 */}
@@ -2194,11 +2114,11 @@ export default function ReceiptsScreen() {
             ) : (
               <>
                 <Text style={{ fontSize: 13, fontWeight: '600', color: '#495057' }}>Filter</Text>
-                {(selectedMonths.size > 0 || selectedRecordDates.size > 0 || selectedAccounts.size > 0 || selectedCreators.size > 0) && (
+                {(selectedMonths.size > 0 || recordDateFilterCount(recordDateRange) > 0 || selectedAccounts.size > 0 || selectedCreators.size > 0) && (
                   <TouchableOpacity
                     onPress={() => {
                       setSelectedMonths(new Set());
-                      setSelectedRecordDates(new Set());
+                      setRecordDateRange(EMPTY_RECORD_DATE_RANGE);
                       setSelectedAccounts(new Set());
                       setSelectedCreators(new Set());
                     }}
@@ -2227,7 +2147,7 @@ export default function ReceiptsScreen() {
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.filterMainOption, { minHeight: 40, lineHeight: 20 }]} onPress={() => setFilterSubMenu('recordDate')}>
                   <View style={styles.filterMainOptionLeft}><Ionicons name="time-outline" size={20} color="#636E72" /><Text style={[styles.filterMainOptionText, { fontSize: 13, lineHeight: 20 }]}>Record Date</Text></View>
-                  <View style={styles.filterMainOptionRight}>{selectedRecordDates.size > 0 && <Text style={[styles.filterCountBadge, { fontSize: 12 }]}>{selectedRecordDates.size}</Text>}<Ionicons name="chevron-forward" size={20} color="#95A5A6" /></View>
+                  <View style={styles.filterMainOptionRight}>{recordDateFilterCount(recordDateRange) > 0 && <Text style={[styles.filterCountBadge, { fontSize: 12 }]}>{recordDateFilterCount(recordDateRange)}</Text>}<Ionicons name="chevron-forward" size={20} color="#95A5A6" /></View>
                 </TouchableOpacity>
               </>
             ) : filterSubMenu === 'month' ? (
@@ -2241,15 +2161,7 @@ export default function ReceiptsScreen() {
                 );
               })
             ) : filterSubMenu === 'recordDate' ? (
-              filterOptions.recordDates.map(day => {
-                const isSelected = selectedRecordDates.has(day.key);
-                return (
-                  <TouchableOpacity key={day.key} style={[styles.pickerOption, isSelected && styles.pickerOptionSelected, { minHeight: 40, lineHeight: 20 }]} onPress={() => setSelectedRecordDates(prev => { const n = new Set(prev); if (n.has(day.key)) n.delete(day.key); else n.add(day.key); return n; })}>
-                    <View style={styles.filterOptionLeft}><View style={[styles.filterCheckbox, isSelected && styles.filterCheckboxSelected]}>{isSelected && <Ionicons name="checkmark" size={14} color="#fff" />}</View><Text style={[styles.pickerOptionText, isSelected && styles.pickerOptionTextSelected, { fontSize: 13, lineHeight: 20 }]}>{day.label}</Text></View>
-                    {isSelected && <Ionicons name="checkmark" size={20} color="#6C5CE7" />}
-                  </TouchableOpacity>
-                );
-              })
+              <RecordDateRangeFields value={recordDateRange} onChange={setRecordDateRange} />
             ) : filterSubMenu === 'account' ? (
               filterOptions.accounts.map((acc: { id: string; name: string }) => {
                 const isSelected = selectedAccounts.has(acc.id);

@@ -11343,3 +11343,21 @@
 **关联**  
 - `vouchap-app/src/mobile-ui/app/receipt-items.tsx`  
 - `vouchap-app/src/mobile-ui/components/DataTable.tsx`（分组头已支持 `totalAmount`）
+
+---
+
+### 2026-10-27（Vouchap：Record Date 筛选改为日期区间）
+
+**User（提示词/原意）**  
+- Expenses 列表筛选项里的 Record date 应采用自定义日期区间，而不是逐日勾选。其他列表也一样。
+
+**Assistant（实现前说明）**  
+- 现有 Record Date 筛选是勾选已出现的单个记录日。Expenses、Income、Inbound、Outbound 四处相同（Web 浮层和移动端底栏都有）。拟抽共用 From / To 组件，按 createdAt 的本地日历日做含首尾区间；只填一端则另一端不限；起止填反时自动对调。分组方式不变。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 新增 `RecordDateRangeFilter`。四个列表的 Record Date 子菜单改为 From / To。Web 用日期输入框，iOS / Android 用系统日期选择器。筛选按钮计数在设置了区间时记 1。Clear 会清掉区间。  
+- 区间判断用本地日历日核对过：区间内、同一天、开区间、起止颠倒、未设区间均符合预期。未在登录后的页面上点过筛选（本机没有在跑的 Web 服务）。未 commit。
+
+**关联**  
+- `vouchap-app/src/mobile-ui/components/RecordDateRangeFilter.tsx`  
+- `vouchap-app/src/mobile-ui/app/receipts.tsx`、`invoices.tsx`、`inbound.tsx`、`outbound.tsx`
