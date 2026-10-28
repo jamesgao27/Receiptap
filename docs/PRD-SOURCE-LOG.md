@@ -11325,3 +11325,21 @@
 - `Adaven-platform/apps/wholestore-app/supabase/migrations/20261027210000_reassert_crm_postgrest_schemas.sql`  
 - `Adaven-platform/packages/db-platform/sql/038_expose_crm_postgrest.sql`  
 - `Adaven-CRM/supabase/functions/product-ops/index.ts`
+
+---
+
+### 2026-10-27（Vouchap Web：Expenses Items 分组合计）
+
+**User（提示词/原意）**  
+- Vouchap Web 的 expenses items 列表，分组也要加上小组金额合计，跟 expenses 列表一样。
+
+**Assistant（实现前说明）**  
+- Expenses 分组头已把 `totalAmount` / `currency` 交给 `DataTable`（组内最多币种，汇率折算，紫色金额）。Items 分组只有条数。拟在 `receipt-items.tsx` 对每个小组用行金额 `price` 做同样合计。未分组仍是平铺表，不加 “All” 头。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- `receipt-items.tsx` 加载汇率，分组标题增加折算后的金额合计（与 Expenses 相同的主币种规则和紫色）。`DataTable` 已有展示，合计为 0 时不显示。  
+- 未在浏览器走通登录后的 Items 页（本机没有在跑的 Web 服务）。请在 Web 打开 Expenses → Items，任选一种 Group，确认每组标题右侧有条数和金额。未 commit。
+
+**关联**  
+- `vouchap-app/src/mobile-ui/app/receipt-items.tsx`  
+- `vouchap-app/src/mobile-ui/components/DataTable.tsx`（分组头已支持 `totalAmount`）
