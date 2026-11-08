@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Regenerate iOS App Store icon + Android launcher mipmaps from src/mobile-ui/assets/logo2.png
-# Run after updating logo2.png (see src/mobile-ui/assets/README.md).
+# Regenerate iOS App Store icon + Android launcher mipmaps from assets/receiptap-icon.png.
+# Native ios/ and android/ override app.config.js, so EAS ships these files.
 set -eu
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SRC="$ROOT/src/mobile-ui/assets/logo2.png"
+SRC="$ROOT/assets/receiptap-icon.png"
 if [[ ! -f "$SRC" ]]; then
   echo "Missing: $SRC" >&2
   exit 1

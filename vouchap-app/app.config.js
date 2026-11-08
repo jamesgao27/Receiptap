@@ -2,7 +2,7 @@ const pkg = require("./package.json");
 
 export default {
   expo: {
-    name: "Vouchap",
+    name: "Receiptap",
     slug: "vouchap",
     // 为提高稳定性，暂时在 iOS/Android 上统一使用 JSC 引擎，规避 Hermes 隐式崩溃
     jsEngine: "jsc",
@@ -10,10 +10,10 @@ export default {
     owner: "aimlink",
     // 使用 default 以支持大屏/平板旋转，符合 Google Play「移除屏幕方向限制」建议
     orientation: "default",
-    // logo2: store / launcher source. expo.icon 用于 prebuild；裸 ios/android 以 AppIcon + mipmap 为准。
-    // 更新 logo2.png 后运行：bash scripts/sync-native-launcher-icons-from-logo2.sh
-    icon: "./assets/logo2.png",
-    scheme: "vouchap", // 关键：解决邮件跳转的核心配置
+    // Store / launcher source. Native ios/ and android/ override this; regenerate with
+    // bash scripts/sync-native-launcher-icons-from-logo2.sh
+    icon: "./assets/receiptap-icon.png",
+    scheme: "receiptap",
     userInterfaceStyle: "light",
     splash: {
       backgroundColor: "#ffffff",
@@ -23,15 +23,14 @@ export default {
     assetBundlePatterns: [],
     ios: {
       supportsTablet: true,
-      bundleIdentifier: "com.vouchap.app",
+      bundleIdentifier: "com.receiptap.app",
       // EAS Build 使用 appVersionSource: remote + autoIncrement，构建时由服务端注入，此处仅作参考
       buildNumber: "44",
       associatedDomains: ["applinks:vouchap.com"]
     },
     android: {
-      package: "com.vouchap.app",
-      // EAS Build 使用 appVersionSource: remote + autoIncrement，构建时由服务端注入，此处仅作参考
-      versionCode: 61,
+      package: "com.receiptap.app",
+      versionCode: 1,
       // 使用系统照片选择器，不再声明 READ_MEDIA_IMAGES，符合 Google Play 照片权限政策
       permissions: [
         "CAMERA",
@@ -41,7 +40,7 @@ export default {
         "INTERNET"
       ],
       adaptiveIcon: {
-        foregroundImage: "./assets/logo2.png",
+        foregroundImage: "./assets/receiptap-icon.png",
         backgroundColor: "#ffffff"
       },
       intentFilters: [
@@ -55,7 +54,10 @@ export default {
               pathPrefix: "/"
             },
             {
-              scheme: "vouchap" // 允许通过 vouchap:// 唤起
+              scheme: "receiptap"
+            },
+            {
+              scheme: "vouchap"
             }
           ],
           category: ["BROWSABLE", "DEFAULT"]
@@ -67,23 +69,23 @@ export default {
       [
         "expo-image-picker",
         {
-          "photosPermission": "Vouchap requires Camera and Photo Library access to scan and upload your receipts for digital tracking.",
-          "cameraPermission": "Vouchap requires Camera and Photo Library access to scan and upload your receipts for digital tracking."
+          "photosPermission": "Receiptap requires Camera and Photo Library access to scan and upload your receipts for digital tracking.",
+          "cameraPermission": "Receiptap requires Camera and Photo Library access to scan and upload your receipts for digital tracking."
         }
       ],
-      ["expo-camera", { "cameraPermission": "Vouchap requires Camera and Photo Library access to scan and upload your receipts for digital tracking." }],
+      ["expo-camera", { "cameraPermission": "Receiptap requires Camera and Photo Library access to scan and upload your receipts for digital tracking." }],
       [
         "react-native-document-scanner-plugin",
         {
-          "cameraPermission": "Vouchap requires Camera and Photo Library access to scan and upload your receipts for digital tracking."
+          "cameraPermission": "Receiptap requires Camera and Photo Library access to scan and upload your receipts for digital tracking."
         }
       ],
       "expo-document-picker"
     ],
     // Web favicon：优先 public/favicon.ico（透明无白边，与 website 同源）；无 ico 时回退 favicon.png
     web: {
-      name: "Vouchap",
-      favicon: "./assets/favicon.png"
+      name: "Receiptap",
+      favicon: "./assets/receiptap-icon.png"
     },
     // 子路径部署（如 Cloudflare Pages 在 /app/）：设置 EXPO_PUBLIC_WEB_BASE_PATH=/app，否则图标/资源可能 404
     ...(process.env.EXPO_PUBLIC_WEB_BASE_PATH

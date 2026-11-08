@@ -6,7 +6,7 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>$(DEVELOPMENT_LANGUAGE)</string>
     <key>CFBundleDisplayName</key>
-    <string>Vouchap</string>
+    <string>Receiptap</string>
     <key>CFBundleExecutable</key>
     <string>$(EXECUTABLE_NAME)</string>
     <key>CFBundleIdentifier</key>
@@ -18,7 +18,7 @@
     <key>CFBundlePackageType</key>
     <string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
     <key>CFBundleShortVersionString</key>
-    <string>2.6.6</string>
+    <string>1.0.0</string>
     <key>CFBundleSignature</key>
     <string>????</string>
     <key>CFBundleURLTypes</key>
@@ -26,8 +26,9 @@
       <dict>
         <key>CFBundleURLSchemes</key>
         <array>
+          <string>receiptap</string>
           <string>vouchap</string>
-          <string>com.vouchap.app</string>
+          <string>com.receiptap.app</string>
         </array>
       </dict>
       <dict>
@@ -51,11 +52,11 @@
       <true />
     </dict>
     <key>NSCameraUsageDescription</key>
-    <string>Vouchap requires Camera access to scan and upload your vouchers for digital tracking.</string>
+    <string>Receiptap requires Camera access to scan and upload your vouchers for digital tracking.</string>
     <key>NSMicrophoneUsageDescription</key>
-    <string>Vouchap requires Microphone access to record voice input for your vouchers and digital tracking.</string>
+    <string>Receiptap requires Microphone access to record voice input for your vouchers and digital tracking.</string>
     <key>NSPhotoLibraryUsageDescription</key>
-    <string>Vouchap requires Photo Library access to upload your vouchers for digital tracking.</string>
+    <string>Receiptap requires Photo Library access to upload your vouchers for digital tracking.</string>
     <key>RCTNewArchEnabled</key>
     <true />
     <key>UILaunchStoryboardName</key>

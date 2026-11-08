@@ -1,0 +1,6 @@
+# Cloudflare Pages for the Receiptap bookkeeping web.
+# Direct Upload only. Domain receiptap.aim.link belongs on this project.
+# Do not connect Git.
+name = "receiptap"
+compatibility_date = "2026-08-21"
+pages_build_output_dir = "./dist"

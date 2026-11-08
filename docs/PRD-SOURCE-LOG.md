@@ -8,6 +8,386 @@
 
 ---
 
+### 2026-11-06（邀请页按 Dropbox 卡片，并显示服务模板）
+
+**User（提示词/原意）**  
+- 页面结构参考 Dropbox 文件请求，中下部分成左右。测试邀请是有内容的，但模板预览仍不显示。
+
+**Assistant（实现前）**  
+- 预览权限在未登录时直接失败，所以邀请里的 SKU 读不出来。页面也还不是卡片式左右布局。
+
+**Assistant（实现后）**  
+- 有效邀请 token 在登录前即可预览模板和资料清单。继续页改成白卡片：标题是事务所请求，中间左侧模板、右侧文件列表和 Add more files，底部姓名、邮箱和 Upload。
+
+**关联**  
+- `apps/portalflow-app/supabase/migrations/20261106180000_anon_invite_sku_preview.sql`  
+- `apps/portalflow-app/src/mobile-ui/app/portal/join.tsx`
+
+---
+
+### 2026-11-06（邀请落地页无侧栏，继续后一页完成）
+
+**User（提示词/原意）**  
+- 落地页不要左侧栏，保持原来的落地页样式。继续后的一页里，名字+邮箱验证，或已有账户则邮箱验证码登录，放在一行。左下用原来的 SKU 预览并加识别后的绿勾。右侧是文件图标列表，添加文件要简单。Upload 按钮表示整包提交给事务所，不是上传。
+
+**Assistant（实现前）**  
+- `/client-join` 仍挂在应用侧栏里。`/portal/join` 把验证、清单、上传按钮拆开，清单也不是 SKU 预览。
+
+**Assistant（实现后）**  
+- 落地页去掉侧栏，沿用邀请卡样式。下一页顶栏一行完成姓名/邮箱或已有账户验证码登录，发码前勾选协议，协议浮窗打开条款页。左侧 SkuPreview，匹配项打绿勾。右侧拖放或点击添加文件，Submit to firm 才通知事务所。
+
+**关联**  
+- `apps/portalflow-app/src/mobile-ui/app/client-join.tsx`  
+- `apps/portalflow-app/src/mobile-ui/app/portal/join.tsx`  
+- `apps/portalflow-app/src/mobile-ui/components/SkuPreview.tsx`
+
+---
+
+### 2026-11-06（Receiptap 支出明细分组小计）
+
+**User（提示词/原意）**  
+- Vouchap 已实现的收支记录 item 列表按分组小计，Receiptap 没有同步，需要复用。
+
+**Assistant（实现前）**  
+- 收入、支出单据列表的分组头已有金额。支出明细表 `/receipt-items` 分组后只显示条数，没有按汇率折算的小计。
+
+**Assistant（实现后）**  
+- 与 Vouchap 相同：分组内取出现最多的币种，其余按汇率折算后显示在分组标题旁。
+
+**关联**  
+- `apps/portalflow-app/src/mobile-ui/app/receipt-items.tsx`
+
+---
+
+### 2026-11-06（邀请落地页之后只进一页）
+
+**User（提示词/原意）**  
+- 客户打开邀请仍是原来的落地页，去掉下载 App。Continue 进入同一页里的验证邮箱、资料清单和文件夹。发验证码前勾选同意服务，协议链接用浮窗打开协议页。
+
+**Assistant（实现前）**  
+- Continue 还进 /auth/setup，再进验证码页，再进门户，跳转过多。落地页仍有商店和二维码。
+
+**Assistant（实现后）**  
+- 落地页只留 Continue。下一页是 /portal/join：勾选并点 service terms 会浮窗打开 https://www.vouchap.com/terms，勾选后才能发验证码。验证通过后清单和文件夹在同一页启用。
+
+**关联**  
+- `vouchap-website/app/client-join/page.tsx`  
+- `apps/portalflow-app/src/mobile-ui/app/portal/join.tsx`  
+- `apps/portalflow-app/src/mobile-ui/app/client-join.tsx`
+
+---
+
+### 2026-11-06（邀请域名改为 portalflow.aim.link）
+
+**User（提示词/原意）**  
+- 现在已解析的域名是 portalflow.aim.link。
+
+**Assistant（实现前）**  
+- 新邀请还指向 portalflow.pages.dev，邮件回跳常量仍是 portalflow.app。portalflow.aim.link 已经打开 Portalflow Web。
+
+**Assistant（实现后）**  
+- 客户邀请和网页继续按钮改为 https://portalflow.aim.link/client-join 。已发出的 portalflow.app 链接仍无解析，同一 token 可打开 https://portalflow.aim.link/auth/setup?token=...
+
+**关联**  
+- `apps/portalflow-app/src/shared-logic/firm-clients.ts`  
+- `vouchap-website/app/client-join/page.tsx`
+
+---
+
+### 2026-11-06（邀请链接 portalflow.app 打不开）
+
+**User（提示词/原意）**  
+- https://portalflow.app/client-join?token=... 邀请链接打不开。
+
+**Assistant（实现前）**  
+- portalflow.app 没有 DNS。邀请默认写死这个域名。落地页在营销站，网页继续按钮还指向 platform.vouchap.com。
+
+**Assistant（实现后）**  
+- 新邀请改为 https://portalflow.pages.dev/client-join ，并在 Web 应用里转到 /auth/setup。营销站继续按钮也进这个地址。已发出的 portalflow.app 链接在域名解析接上之前仍然打不开。
+
+**关联**  
+- `apps/portalflow-app/src/shared-logic/firm-clients.ts`  
+- `vouchap-website/app/client-join/page.tsx`
+
+---
+
+### 2026-11-06（Portalflow 客户资料门户）
+
+**User（提示词/原意）**  
+- 客户端跟此前报税客户端同一套架构，但不要完整 engagement 协同。同意条款后是邮箱验证码加上传文件，像 Dropbox portal。验证码首次通过就建 space 并跳过设置，已有 space 则绑定。文件按文件夹展示，左侧是邀请模板的资料清单，AI 识别齐了就变绿。客户可催办和留言。事务所 engagement 增加沟通入口。
+
+**Assistant（实现前）**  
+- 邀请页去掉选 space。新路由 `/portal/join` 和 `/portal/[orderId]`。表 `engagement_files`、`engagement_messages`、`engagement_checklist_state`。
+
+**Assistant（实现后）**  
+- 同意条款后发邮箱验证码。一个客户 space 直接绑定，多个只选名称，没有则用邮箱前缀建 space。门户左侧清单、右侧文件夹。上传后 AI 对照标题和说明，齐了就把 todo 标绿。事务所详情有 Communication，可回复。Supabase 邮件模板仍需在 Dashboard 改成展示 `{{ .Token }}`，否则信里还是链接。
+
+**关联**  
+- `apps/portalflow-app/src/mobile-ui/app/portal/[orderId].tsx`  
+- `apps/portalflow-app/supabase/migrations/20261106120000_engagement_portal.sql`
+
+---
+
+### 2026-11-06（Receiptap Web：收入付款人与实体列表不一致）
+
+**User（提示词/原意）**  
+- Receiptap Web 的 income 列表里有的 payer，在设置的 entities，以及收入详情里改选 payer 的列表，都看不到。
+
+**Assistant（实现前）**  
+- 收入列表优先显示单据上的 `customer_name`。实体设置和选单只列未合并的 entities。库里有只写了名称、没有实体的收入，也有名称还停在已合并实体上的收入。
+
+**Assistant（实现后）**  
+- 打开收入列表或实体设置时，把这些付款人挂到未合并实体上：没有实体就按名称创建，已合并的改挂到合并后的实体，并把单据名称改成该实体名称。收入列表改为优先显示实体名。
+
+**关联**  
+- `apps/portalflow-app/src/shared-logic/entities.ts`  
+- `apps/portalflow-app/src/shared-logic/invoices.ts`
+
+---
+
+### 2026-11-06（Portalflow 客户资料门户）
+
+**User（提示词/原意）**  
+- 客户端跟此前报税客户端同一套架构，但不要完整 engagement 协同。同意条款后是邮箱验证码加上传文件，像 Dropbox portal。验证码首次通过就建 space 并跳过设置，已有 space 则绑定。文件按文件夹展示，左侧是邀请模板的资料清单，AI 识别齐了就变绿。客户可催办和留言。事务所 engagement 增加沟通入口。
+
+**Assistant（实现前）**  
+- 邀请页去掉选 space。新路由 `/portal/join` 和 `/portal/[orderId]`。表 `engagement_files`、`engagement_messages`、`engagement_checklist_state`。
+
+**Assistant（实现后）**  
+- 同意条款后发邮箱验证码。一个客户 space 直接绑定，多个只选名称，没有则用邮箱前缀建 space。门户左侧清单、右侧文件夹。上传后 AI 对照标题和说明，齐了就把 todo 标绿。事务所详情有 Communication，可回复。Supabase 邮件模板仍需在 Dashboard 改成展示 `{{ .Token }}`，否则信里还是链接。
+
+**关联**  
+- `apps/portalflow-app/src/mobile-ui/app/portal/[orderId].tsx`  
+- `apps/portalflow-app/supabase/migrations/20261106120000_engagement_portal.sql`
+
+---
+
+### 2026-11-06（拆开 Portalflow 与 Receiptap 的 Web）
+
+**User（提示词/原意）**  
+- 分离 Portalflow 和 Receiptap 的 Web。Receiptap 功能与 App 对齐，去掉报税。Portalflow 主要是事务所登录；客户用邮箱登录后只看报税、律师等服务历史（具体界面以后再设计）。域名 receiptap.aim.link 另行配置。
+
+**Assistant（实现前）**  
+- 仍是同一套 portalflow-app。Receiptap Web 用 `APP_VARIANT=receiptap` 另发到 Pages `receiptap`。Portalflow Web 客户空间不再进记账，只留服务历史壳；事务所端不变。
+
+**Assistant（实现后）**  
+- 客户首页是 Service history：报税进现有历史，律师先占位。记账路由在 Portalflow 客户空间会回到首页。Receiptap 导出不含报税和事务所。自定义域名需在 Cloudflare 绑到 Pages `receiptap`，并把 `https://receiptap.aim.link/**` 与 `https://receiptap.pages.dev/**` 加进 Supabase Auth 的重定向白名单（本地 config.toml 已写，未对线上做整份 config push）。
+
+**关联**  
+- `apps/portalflow-app/src/shared-logic/portalflow-sidebar-nav.ts`  
+- `apps/portalflow-app/src/mobile-ui/components/ClientServicesHome.tsx`  
+- `.github/workflows/deploy-receiptap-web.yml`
+
+---
+
+### 2026-11-05（Wholestore 应用内换成新仓库图标）
+
+**User（提示词/原意）**  
+- Wholestore 的 logo 也规范更新了，修改应用内透出的各处。
+
+**Assistant（实现前）**  
+- 应用内登录、侧栏和网页图标都引用 `apps/wholestore-app/assets/icon.png`。只换这一张，再发布 Wholestore Web。
+
+**Assistant（实现后）**  
+- 已换成新的仓库卡车图标并推送。Deploy Wholestore Web 成功，线上为 https://wholestore.pages.dev。
+
+**关联**  
+- `Adaven-platform/apps/wholestore-app/assets/icon.png`  
+- `Adaven-platform/apps/wholestore-app/src/bootstrap.ts`
+
+---
+
+### 2026-11-05（Portalflow 新盾牌：应用内黑金，网站蓝紫）
+
+**User（提示词/原意）**  
+- 更新了 Portalflow 的 logo。应用内用 1，网站上用 2，包括 Workmap 网站友情链接。
+
+**Assistant（实现前）**  
+- 1 是黑金盾，2 是蓝紫盾。应用内 logo/favicon 换 1；vouchap.com 与 Workmap 页脚换 2。Receiptap 收据图标不动。
+
+**Assistant（实现后）**  
+- 已推送三处仓库。Portalflow Web 会因 `apps/portalflow-app/**` 自动部署，登录和侧栏用黑金盾。
+
+**关联**  
+- `Adaven-platform/apps/portalflow-app/assets/logo.png`  
+- `vouchap-website/public/logo.png`  
+- `Workmap-website/public/assets/partner-vouchap.png`
+
+---
+
+### 2026-11-05（商店链接与 App 回调改为 receiptap）
+
+**User（提示词/原意）**  
+- App Store 和 Google Play 的应用链接、回调地址里的 vouchap 要改成 receiptap。网站上对应的介绍和链接一起改。
+
+**Assistant（实现前）**  
+- 深链 scheme、确认页和邀请页的打开 App 地址改为 `receiptap://`。App Store 链接名称段改为 receiptap，数字 id 不变。Play 详情仍用已上架包名 `com.vouchap.app`。原生同时保留 `vouchap://`，旧邮件还能打开。
+
+**Assistant（实现后）**  
+- 网站与 Receiptap 工程已改。https 通用链接域名仍是 vouchap.com，因为确认页就在这个网站上。
+
+**关联**  
+- `vouchap-website/lib/storeLinks.ts`  
+- `Adaven-platform/apps/portalflow-app/android/app/src/main/AndroidManifest.xml`  
+- `Adaven-platform/apps/portalflow-app/ios/Vouchap/Info.plist`
+
+---
+
+### 2026-11-05（Receiptap Android 自适应图标）
+
+**User（提示词/原意）**  
+- 给了 Receiptap 前后分离的 logo，需要重新构建 Android 生产包，让 logo 在手机上显示正常。
+
+**Assistant（实现前）**  
+- 现有启动图标把整张方图塞进前景，系统蒙版会裁掉边缘。改为自适应图标：背景用渐变层，前景用透明收据层。
+
+**Assistant（实现后）**  
+- 已写入 `mipmap-*/ic_launcher_foreground.webp` 与 `drawable-*/ic_launcher_adaptive_bg.png`，旧版启动图标用两层合成。随后打 Receiptap Android 生产包。
+
+**关联**  
+- `Adaven-platform/apps/portalflow-app/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml`
+
+---
+
+### 2026-11-04（Web 登录品牌：登录前与 Firm 用 Portalflow，Client 用 Receiptap）
+
+**User（提示词/原意）**  
+- Web 端应用：firm 登录是 Portalflow 和盾牌 logo，client 登录则 logo 和名称是 Receiptap。登录前的界面用 Portalflow。
+
+**Assistant（实现前）**  
+- 登录、注册、重置密码仍读静态产品名，所以保持 Portalflow 黑金盾。登录后侧栏按当前空间 kind 切换。
+
+**Assistant（实现后）**  
+- `getBrand`：无空间或 provider 为 Portalflow 盾牌；consumer 为 Receiptap 收据标。浏览器标题同步。已推送，Pages 会因 `apps/portalflow-app/**` 自动部署。
+
+**关联**  
+- `Adaven-platform/packages/platform-ui/src/chrome/WebSidebar.tsx`  
+- `Adaven-platform/apps/portalflow-app/src/shared-logic/portalflow-space-bootstrap.ts`
+
+---
+
+### 2026-11-04（网站主品牌改回 Portalflow，盾牌分蓝紫/黑金）
+
+**User（提示词/原意）**  
+- vouchap 网站主题名称应是 Portalflow。Receiptap 只是其中一个能力的独立版，类似 Workmap 里的 Focusing。Portalflow 用以前的盾牌 logo：应用内黑金，网站蓝紫。从图库里找。
+
+**Assistant（实现前）**  
+- 蓝紫盾是 `logo-prev.png`，黑金盾是 `logo2-prev.png`。收据图标留给 Receiptap 变体，不覆盖 Portalflow。
+
+**Assistant（实现后）**  
+- 网站锁标和文案改回 Portalflow，功能区保留 Receiptap 作为独立记账应用。站图用蓝紫盾，应用内 logo 用黑金盾。Workmap 页脚友情链接同步为 Portalflow 蓝紫盾。已推送并触发 Portalflow Pages 部署。
+
+**关联**  
+- `vouchap-website/public/logo.png`  
+- `Adaven-platform/apps/portalflow-app/assets/logo2-prev.png`  
+- `Adaven-platform/apps/portalflow-app/assets/receiptap-icon.png`
+
+---
+
+### 2026-11-04（网站新 Logo 加圆角）
+
+**User（提示词/原意）**  
+- 网站上用新 logo 的需要加圆角处理。
+
+**Assistant（实现前）**  
+- Receiptap 方图标出现在 vouchap.com 顶栏/页脚/Showcase，以及 Workmap 页脚友情链接。Portalflow / Wholestore Web 登录和侧栏也用产品 logo。统一用 22% 圆角。
+
+**Assistant（实现后）**  
+- 已改并推送 `Vouchap-website` `27a0325`、`Workmap-website` `5eee1a8`。平台 Web 壳 logo 圆角在 `Adaven-platform`，并触发 Portalflow 与 Wholestore 的 Pages 部署。
+
+**关联**  
+- `vouchap-website/components/Navbar.tsx`  
+- `Workmap-website/src/components/Footer.jsx`  
+- `Adaven-platform/packages/platform-ui`
+
+---
+
+### 2026-11-04（Portalflow Web 构建并发布 Pages）
+
+**User（提示词/原意）**  
+- portalflow 的 web 端也需要构建 pages。
+
+**Assistant（实现前）**  
+- 本机 Wrangler 未登录。`main` 已含最新代码，用 GitHub Action **Deploy Portalflow Web** 做 Direct Upload，目标项目 `portalflow`，不带 `APP_VARIANT`，因此是 Portalflow 而不是 Receiptap。
+
+**Assistant（实现后）**  
+- 运行 https://github.com/jamesgao27/Adaven-platform/actions/runs/41928000631 成功。站点为 https://portalflow.pages.dev 。
+
+**关联**  
+- `.github/workflows/deploy-portalflow-web.yml`
+
+---
+
+### 2026-11-04（Wholestore 新图标全面更换）
+
+**User（提示词/原意）**  
+- Wholestore 应用的新图标，全面更换。
+
+**Assistant（实现前）**  
+- Wholestore 只有 `apps/wholestore-app/assets/icon.png` 一处：应用图标、Web favicon、登录/侧栏 logo 都引用它。没有单独的原生 mipmap 或营销站。
+
+**Assistant（实现后）**  
+- 已用上传的仓库图标覆盖 `assets/icon.png`（1024 不透明 PNG）。本地 `expo export` 已打进新图标。Cloudflare 未登录，Pages `wholestore` 还没发出去；本机执行 `npm run wholestore:deploy:web` 即可更新线上 Web。
+
+**关联**  
+- `Adaven-platform/apps/wholestore-app/assets/icon.png`
+
+---
+
+### 2026-11-04（Receiptap 新图标：App 与网站）
+
+**User（提示词/原意）**  
+- 上传了新 logo。Receiptap 用这张图标更新各处，重新构建，并更新网站各处的显示。
+
+**Assistant（实现前说明）**  
+- 源图为 1024 方形收据图标。写入 App 的 `logo2.png` 并同步 iOS/Android 启动图标；站内 `logo.png`、`logo3.png`、favicon 一并替换。版本仍是 2.6.7，构建号由 EAS 递增。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 图标已进 Portalflow/Receiptap 的应用内 logo、iOS 1024 图标和 Android mipmap。网站顶栏、页脚、Showcase、登录确认页的标记和产品名改为 Receiptap，并已推到 `jamesgao27/Vouchap-website` 的 `main`（`e13f8f0`）。商店包正在重新构建。
+
+**关联**  
+- `Adaven-platform/apps/portalflow-app/assets/logo2.png`  
+- `vouchap-website/public/logo.png`
+
+---
+
+### 2026-11-04（Receiptap：Portalflow 代码打记账包，沿用 Vouchap 商店账号）
+
+**User（提示词/原意）**  
+- 用 Portalflow 的代码构建只有记账功能、不能登录和切换 provider 空间的 App，命名为 Receiptap。Expo 与 App Store / Google Play 账户用原来的 Vouchap，版本号按原序列升级。
+
+**Assistant（实现前说明）**  
+- 在 `portalflow-app` 用 `APP_VARIANT=receiptap` 出包，不另起仓库。显示名 Receiptap，包名、scheme、EAS 项目仍是 `com.vouchap.app` / `vouchap` / `@aimlink/vouchap`，版本 2.6.7。空间切换只保留 `consumer`。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 记账导航只留 Expenses / Income。Tax Filing 与 Firm 路由在该变体中关闭。当前空间若是 provider，会改到一本 consumer 账；没有记账空间则去创建，切换列表里不出现 provider。  
+- EAS 生产环境改为 Portalflow 库。iOS 2.6.7 (49) 已构建并提交 App Store Connect：https://expo.dev/accounts/aimlink/projects/vouchap/submissions/b322534e-7639-4504-914d-0d3f9ad5e302 。Android 2.6.7 (66) 仍在队列：https://expo.dev/accounts/aimlink/projects/vouchap/builds/17c6d625-5481-4b5b-a8b2-6d2804572b6a 。  
+- 为通过 CocoaPods，把 `react-native-worklets` 固定为 0.5.1 并提升到 monorepo 根，与 Reanimated 4.1 放在一起。
+
+**关联**  
+- `Adaven-platform/apps/portalflow-app/app.config.js`、`eas.json`  
+- `Adaven-platform/packages/platform-ui/src/product.ts`
+
+---
+
+### 2026-11-04（Vouchap 客户数据迁入 Portalflow 库）
+
+**User（提示词/原意）**  
+- 直接把 Vouchap 库中的数据全部迁到 Portalflow 库。迁移前可以清除 Portalflow 里已有的测试数据。
+
+**Assistant（实现前说明）**  
+- 源库 `giuacjbfsyrristkigmz` 只读。目标库 `xvqlqvtfogxkfeillvig` 先清空业务数据，再按 UUID 原样写入。`firm`/`client` 收成 `provider`/`consumer`。Storage 对象另拷，库内 URL 的项目域名改成 Portalflow。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- Portalflow 测试数据已清空。迁入：auth 用户 67、空间 69（consumer 66 / provider 3）、收据 1107、收据明细 4484、发票 67、聊天日志 725、事务所客户 30、订单 48、项目 30、待办 990、订阅订单 77。Storage：receipts 1440、tax-filing 292、chat-audio 156、marketplace 16。抽查收据和报税附件的公网地址返回 200。  
+- 补了 Portalflow 缺的记账列，并把类目唯一约束改成带 `scope`。`chat-audio`、`tax-filing` 桶改为 public，与 Vouchap 上的公开 URL 一致。  
+- 未迁：登录会话（密码哈希已复制，需重新登录）、`crm.ops_assignments`（89）和 `crm.role_menu_permissions`（28）（目标库没有这些表）、空的 workmap。`firm.invitee_clients` 7 行里 1 行写入 `provider.consumers`，其余已在客户表中。Vouchap 源库未改。Adaven-CRM 若两个产品适配器都指向这两套库，会看到两份相同客户。
+
+**关联**  
+- `Adaven-platform/apps/portalflow-app/supabase/migrations/20261104190000_align_bookkeeping_columns_from_vouchap.sql`
+
+---
+
 ### 2026-10-03（Adaven-CRM：Wholestore 客户查询 Edge Function 非 2xx）
 
 **User（提示词/原意）**  
@@ -11361,3 +11741,45 @@
 **关联**  
 - `vouchap-app/src/mobile-ui/components/RecordDateRangeFilter.tsx`  
 - `vouchap-app/src/mobile-ui/app/receipts.tsx`、`invoices.tsx`、`inbound.tsx`、`outbound.tsx`
+
+---
+
+### 2026-11-03（Adaven-CRM：Portalflow 与 Wholestore Edge Function 非 2xx）
+
+**User（提示词/原意）**  
+- adaven-CRM 上 portalflow 和 wholestore 两个应用又出现报错：Edge Function returned a non-2xx status code。
+
+**Assistant（实现前说明）**  
+- 与 10-03 / 10-27 相同路径：Hub `product-ops` 读各产品 `crm.space_orders` / `sku_edition`。先用 service role 打 REST `Accept-Profile: crm`，对照 `authenticator.pgrst.db_schemas`。不改 CRM 前端。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- Portalflow REST hint 只剩 `public, graphql_public`（`crm` / `provider` / `consumer` 都没了）。Wholestore hint 为 `public, graphql_public, provider, consumer`，又没有 `crm`。`spaces` 仍是 200，所以前端整页显示 Edge Function 非 2xx。Vouchap 的 `crm` 正常。  
+- 已在两个生产库重跑 GRANT + `ALTER ROLE authenticator SET pgrst.db_schemas` + NOTIFY，并把迁移标为 applied：Portalflow `20261104020000_reassert_postgrest_schemas.sql`（含 provider/consumer），Wholestore `20261104020000_reassert_crm_postgrest_schemas.sql`。复查 `crm.space_orders` / `sku_edition` / `sku_addon` 以及 provider、consumer 均为 200。  
+- Wholestore `config.toml` 补了 `[api].schemas`，避免以后 config push 再丢掉 `crm`。未改 CRM 前端，未 commit。刷新 CRM 再选这两个产品即可。平台仍可能再次清掉 `authenticator` 角色配置；若复发，按各自 `supabase/APPLY.md` 重跑对应 SQL。
+
+**关联**  
+- `Adaven-platform/apps/portalflow-app/supabase/migrations/20261104020000_reassert_postgrest_schemas.sql`  
+- `Adaven-platform/apps/wholestore-app/supabase/migrations/20261104020000_reassert_crm_postgrest_schemas.sql`  
+- `Adaven-CRM/supabase/functions/product-ops/index.ts`
+
+---
+
+### 2026-11-08（Receiptap 与 Portalflow 拆开）
+
+**User（提示词/原意）**  
+- 按已确认计划拆开：Receiptap 回到 Vouchap 代码和库 `giuacjbfsyrristkigmz`，仓库改名为 Receiptap，新商店包名 `com.receiptap.app`，版本从 1.0.0 起。已上架的 Vouchap（`com.vouchap.app`）回退到 2026 年 11 月之前的版本并停更，名称和版本说明恢复成当时的 Vouchap。Portalflow 只保留事务所 CRM 和客户门户，不再用它构建 Receiptap。迁移后写在 Portalflow 库的记账补回原库。这次不做 engagement 调用 Receiptap。
+
+**Assistant（实现前说明）**  
+- 沿用 Expo 项目 `f98c5cea-fd51-41e3-9c9c-1512c6b1a8e7`。改 `vouchap-app` 的名称、包名、scheme、图标和版本；Android 只改 applicationId，namespace 保持 `com.vouchap.app`。把 Portalflow 库里 11 月 4 日之后新增或改过的 entities / receipts / invoices 及明细 upsert 回 Vouchap 库。EAS production 环境指回原库。Portalflow 去掉 Receiptap 的 EAS profile 和 Pages 部署。商店能用 Play API 做的先做，需要人工点确认的单独交代。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- GitHub 仓库已改为 `jamesgao27/Receiptap`，本地 remote 已更新。应用标识改为 Receiptap / `com.receiptap.app` / scheme `receiptap` / 1.0.0，启动图标换成收据标。  
+- 记账已补回：四张 11 月 4 日之后的新收据在原库中。EAS production 的 Supabase URL 已指回 `giuacjbfsyrristkigmz`。  
+- Play：商店标题和简介已改回 Vouchap。versionCode 69 已停更。Google 不允许把已上架的高 versionCode 降回 61，停掉 69 后生产轨道上仍是 11 月的 versionCode 68。要把用户手机上的包换回 11 月之前的程序，只能再交一个更高 versionCode 的旧二进制。  
+- App Store Connect 没有本机 API 密钥，2.6.7（build 51）是否已对用户开放无法在这里改。  
+- Receiptap Web 已导出，Wrangler 本机登录失效，还没传到 Pages `receiptap`。  
+- 未做两个库之间的 engagement 读取。
+
+**关联**  
+- `vouchap-app/app.config.js`、`android/app/build.gradle`、`wrangler.toml`  
+- `Adaven-platform` 的 Portalflow 部署配置
