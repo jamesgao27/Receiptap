@@ -25,7 +25,7 @@ export default {
       supportsTablet: true,
       bundleIdentifier: "com.receiptap.app",
       // EAS Build 使用 appVersionSource: remote + autoIncrement，构建时由服务端注入，此处仅作参考
-      buildNumber: "44",
+      buildNumber: "1",
       associatedDomains: ["applinks:vouchap.com"]
     },
     android: {

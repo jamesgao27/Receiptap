@@ -1,7 +1,7 @@
 {
   "cli": {
     "version": ">= 3.0.0",
-    "appVersionSource": "remote"
+    "appVersionSource": "local"
   },
   "build": {
     "development": {
@@ -14,8 +14,7 @@
       "android": { "buildType": "apk" }
     },
     "production": {
-      "env": { "NODE_ENV": "production" },
-      "autoIncrement": true
+      "env": { "NODE_ENV": "production" }
     }
   },
   "submit": { "production": {} }

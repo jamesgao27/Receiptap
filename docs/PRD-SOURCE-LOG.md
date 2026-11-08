@@ -11773,7 +11773,7 @@
 - 沿用 Expo 项目 `f98c5cea-fd51-41e3-9c9c-1512c6b1a8e7`。改 `vouchap-app` 的名称、包名、scheme、图标和版本；Android 只改 applicationId，namespace 保持 `com.vouchap.app`。把 Portalflow 库里 11 月 4 日之后新增或改过的 entities / receipts / invoices 及明细 upsert 回 Vouchap 库。EAS production 环境指回原库。Portalflow 去掉 Receiptap 的 EAS profile 和 Pages 部署。商店能用 Play API 做的先做，需要人工点确认的单独交代。
 
 **Assistant（实现后说明 / 本轮结论）**  
-- GitHub 仓库已改为 `jamesgao27/Receiptap`，本地 remote 已更新。应用标识改为 Receiptap / `com.receiptap.app` / scheme `receiptap` / 1.0.0，启动图标换成收据标。  
+- GitHub 仓库已改为 `jamesgao27/Receiptap`，本地 remote 已更新。应用标识改为 Receiptap / `com.receiptap.app` / scheme `receiptap` / 1.0.0（构建号 1）。EAS 版本源改为本地，避免沿用 Vouchap 的远程 2.6.7 计数。启动图标换成收据标。  
 - 记账已补回：四张 11 月 4 日之后的新收据在原库中。EAS production 的 Supabase URL 已指回 `giuacjbfsyrristkigmz`。  
 - Play：商店标题和简介已改回 Vouchap。versionCode 69 已停更。Google 不允许把已上架的高 versionCode 降回 61，停掉 69 后生产轨道上仍是 11 月的 versionCode 68。要把用户手机上的包换回 11 月之前的程序，只能再交一个更高 versionCode 的旧二进制。  
 - App Store Connect 没有本机 API 密钥，2.6.7（build 51）是否已对用户开放无法在这里改。  
