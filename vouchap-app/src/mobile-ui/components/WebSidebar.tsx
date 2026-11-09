@@ -130,7 +130,7 @@ export default function WebSidebar() {
       {/* 品牌：仅 Web 大屏左侧栏使用 logo3；其余页面用 logo.png */}
       <View style={styles.brand}>
         <Image
-          source={require('../../../assets/logo3.png')}
+          source={require('../../../assets/receiptap-icon.png')}
           style={styles.logoImage}
           resizeMode="contain"
         />

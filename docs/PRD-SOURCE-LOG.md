@@ -11840,3 +11840,16 @@
 
 **Assistant（实现后说明 / 本轮结论）**  
 - 项目名是 `receiptap`，默认地址 https://receiptap.pages.dev 标题为 Receiptap。`receiptap.aim.link` 已指向它。旧项目 `vouchap` 已删除。`vouchap.aim.link` 和 `platform.vouchap.com` 的 CNAME 还没改到 `receiptap.pages.dev`。
+
+---
+
+### 2026-11-09（Receiptap 标志用到记账项目各处）
+
+**User（提示词/原意）**  
+- 把之前给 Portalflow 的 Receiptap 新标志用到现在 Receiptap 项目的网页、App 等各处露出。
+
+**Assistant（实现前说明）**  
+- 新标志是紫底收据加绿色对勾。登录、侧栏等还在用旧的 tax 标志。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 登录、注册、设密码、建空间和 Web 侧栏改用新标志。浏览器图标和 iOS/Android 启动图标已从同一张图重新生成。网页已发到 `receiptap.pages.dev`。已上架的安装包要等下一次构建才会带上新启动图标。

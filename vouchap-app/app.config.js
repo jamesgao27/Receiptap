@@ -40,8 +40,9 @@ export default {
         "INTERNET"
       ],
       adaptiveIcon: {
-        foregroundImage: "./assets/receiptap-icon.png",
-        backgroundColor: "#ffffff"
+        foregroundImage: "./assets/receiptap-foreground.png",
+        backgroundImage: "./assets/receiptap-background.png",
+        backgroundColor: "#E6D9FF"
       },
       intentFilters: [
         {
