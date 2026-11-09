@@ -17,5 +17,16 @@
       "env": { "NODE_ENV": "production" }
     }
   },
-  "submit": { "production": {} }
+  "submit": {
+    "production": {
+      "ios": {
+        "ascAppId": "6832428828"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./vouchap-f2d1043256dd.json",
+        "track": "internal",
+        "releaseStatus": "completed"
+      }
+    }
+  }
 }
