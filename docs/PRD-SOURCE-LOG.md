@@ -11853,3 +11853,29 @@
 
 **Assistant（实现后说明 / 本轮结论）**  
 - 登录、注册、设密码、建空间和 Web 侧栏改用新标志。浏览器图标和 iOS/Android 启动图标已从同一张图重新生成。网页已发到 `receiptap.pages.dev`。已上架的安装包要等下一次构建才会带上新启动图标。
+
+---
+
+### 2026-11-09（Receiptap 验证邮件名称）
+
+**User（提示词/原意）**  
+- 修订 Receiptap 的邮件验证模板，把 Vouchap 改为 Receiptap，问能否直接改。
+
+**Assistant（实现前说明）**  
+- 模板不在仓库里，在 Supabase 项目 `giuacjbfsyrristkigmz` 的 Auth 配置。只改显示名称，不改跳转白名单。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 已直接改线上模板。发件人名称、确认注册、改邮箱、邀请、重置密码的标题和正文里的 Vouchap 都已换成 Receiptap。`vouchap://` 和 `vouchap.com` 的跳转地址未改。Magic Link 原文没有产品名，未改。
+
+---
+
+### 2026-11-09（Receiptap 邮件跳转与 Magic Link）
+
+**User（提示词/原意）**  
+- `receiptap.aim.link` 已解析到 Receiptap 项目。跳转地址也要改。Magic Link 按现有邮件风格拟一份模板。
+
+**Assistant（实现前说明）**  
+- 确认、重置、改邮箱、邀请邮件里的按钮还指向 `vouchap.com/auth/confirm`。Auth 站点地址是 localhost。应用里注册和重置的生产回跳也是 `vouchap.com`。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 站点地址改为 `https://receiptap.aim.link`。白名单加上 `receiptap.aim.link`、`receiptap.pages.dev` 和 `receiptap://`，旧的 vouchap 地址保留。四封邮件按钮改到 `https://receiptap.aim.link/auth/confirm`。Magic Link 标题为 “Your sign-in link for Receiptap”，正文含登录按钮、`{{ .ConfirmationURL }}` 和验证码 `{{ .Token }}`。`auth.ts` 的生产回跳已改为同一地址。
