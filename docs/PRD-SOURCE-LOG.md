@@ -11775,7 +11775,7 @@
 **Assistant（实现后说明 / 本轮结论）**  
 - GitHub 仓库已改为 `jamesgao27/Receiptap`，本地 remote 已更新。应用标识改为 Receiptap / `com.receiptap.app` / scheme `receiptap` / 1.0.0（构建号 1）。EAS 版本源改为本地，避免沿用 Vouchap 的远程 2.6.7 计数。启动图标换成收据标。  
 - 记账已补回：四张 11 月 4 日之后的新收据在原库中。EAS production 的 Supabase URL 已指回 `giuacjbfsyrristkigmz`。  
-- Play：商店标题和简介已改回 Vouchap。versionCode 69 已停更。Google 不允许把已上架的高 versionCode 降回 61，停掉 69 后生产轨道上仍是 11 月的 versionCode 68。要把用户手机上的包换回 11 月之前的程序，只能再交一个更高 versionCode 的旧二进制。  
+- Play：商店标题和简介已改回 Vouchap。11 月的包不能直接降回 versionCode 61，所以用 7 月 24 日的 2.6.6 源码打了 versionCode 70，并已提交到 `com.vouchap.app` 生产轨道（已完成）。新 Receiptap Android 1.0.0（versionCode 1）已构建完成，商店商品尚未建立，所以还没提交。  
 - App Store Connect 没有本机 API 密钥，2.6.7（build 51）是否已对用户开放无法在这里改。  
 - Receiptap Web 已导出，Wrangler 本机登录失效，还没传到 Pages `receiptap`。  
 - 未做两个库之间的 engagement 读取。
@@ -11783,3 +11783,47 @@
 **关联**  
 - `vouchap-app/app.config.js`、`android/app/build.gradle`、`wrangler.toml`  
 - `Adaven-platform` 的 Portalflow 部署配置
+
+---
+
+### 2026-11-08（Receiptap iOS 证书登录）
+
+**User（提示词/原意）**  
+- 已经登录 Apple，继续做 iOS 构建。
+
+**Assistant（实现前说明）**  
+- 无代码变更。用已有 EAS 账号为 `com.receiptap.app` 走交互式 iOS 证书。网页登录和 Developer Portal 密码不是同一次会话。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- EAS 仍要求 Apple ID 密码。自动应答把预填的 Apple ID 当成了另一次确认，密码框收到了错误内容。Apple 返回账号 `james.aim.link@gmail.com` 因安全原因被锁定（错误 -20209）。没有重试，没有打出 iOS 包。需要先在 https://iforgot.apple.com 解锁，再用 App 专用密码登录。
+- 随后按用户要求，在本机「终端」窗口重新执行 `eas build --platform ios --profile production`，密码由用户自己输入。证书已就绪，iOS 1.0.0 已上传并排队：`5459f67b-6dc2-40b2-bcc1-6be269e5d722`。
+
+---
+
+### 2026-11-08（App Store 上现有应用名称）
+
+**User（提示词/原意）**  
+- App Store Connect 里现有应用还显示 Receiptap，是否要手动改回 Vouchap。
+
+**Assistant（实现前说明）**  
+- 无代码变更。现有商品是 Apple ID `6758536342` 的旧 Vouchap，本月只改了商店名称。新包 `com.receiptap.app` 还没有对应商品。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 要手动把这条旧商品的名称和本月的 What's New 改回 11 月之前的 Vouchap。不要改它的 Bundle ID。新的 Receiptap 需要另建一条商品。
+- 用户确认打 `2.6.8` 回退。已用 7 月 24 日源码构建并提交 iOS `2.6.8`（构建号 52）到旧应用 `6758536342`。
+- 用户要求把 Receiptap 新包交到新建的 Apple 和 Google 商品。iOS `1.0.0`（构建号 1）已传到新应用 `6832428828`。用户给提交账号加了新应用权限后，Android `1.0.0`（versionCode 1）已交到 `com.receiptap.app` 的内部测试轨道。提交 `8aee8e2c-4eea-4557-88fc-ad66cb9aeb02`。
+
+---
+
+### 2026-11-09（Receiptap Web 回到原站点，Portalflow 只留事务所）
+
+**User（提示词/原意）**  
+- Web 恢复用原来的 Vouchap 网页，名称改为 Receiptap。Portalflow 发布的 Receiptap 作废，包括代码和已创建的 Cloudflare 项目。Portalflow 只留事务所功能，Web 不再切换到客户类型的 space。
+
+**Assistant（实现前说明）**  
+- 原网页在 Pages 项目 `vouchap`。Portalflow 建的项目是 `receiptap`。事务所端把可选空间收成 Firm，登录后若当前空间不是事务所就改到事务所空间。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 已删除 Pages 项目 `receiptap`，并把原 Vouchap 网页以名称 Receiptap 发到项目 `vouchap`（`vouchap.pages.dev` 标题为 Receiptap）。`receiptap.aim.link` 已在该项目登记，DNS 仍缺指向 `vouchap.pages.dev` 的 CNAME。  
+- Portalflow 不再构建 Receiptap。Web 空间列表和新建空间只有 Firm。  
+- 客户邀请页仍在，但事务所登录后的 Web 不会进入客户空间。

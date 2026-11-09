@@ -80,7 +80,7 @@ export default function ResetPasswordScreen() {
               <View style={stylesWeb.header}>
                 <View style={stylesWeb.logoRow}>
                   <Image source={require('../../../assets/logo.png')} style={stylesWeb.logoImg} resizeMode="contain" />
-                  <Text style={stylesWeb.brandName}>Vouchap</Text>
+                  <Text style={stylesWeb.brandName}>Receiptap</Text>
                 </View>
                 <View style={stylesWeb.successIconWrap}>
                   <Ionicons name="mail-open-outline" size={48} color="#6C5CE7" />
@@ -174,7 +174,7 @@ export default function ResetPasswordScreen() {
             <View style={stylesWeb.header}>
               <View style={stylesWeb.logoRow}>
                 <Image source={require('../../../assets/logo.png')} style={stylesWeb.logoImg} resizeMode="contain" />
-                <Text style={stylesWeb.brandName}>Vouchap</Text>
+                <Text style={stylesWeb.brandName}>Receiptap</Text>
               </View>
               <Text style={stylesWeb.title}>Reset Password</Text>
               <Text style={stylesWeb.subtitle}>Enter your email and we'll send you a reset link</Text>

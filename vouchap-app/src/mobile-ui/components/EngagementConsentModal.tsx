@@ -89,7 +89,7 @@ export default function EngagementConsentModal({
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>1) Engagement Activation & Project Governance</Text>
                   <Text style={styles.sectionText}>
-                    By consenting, you agree to start a client-owned tax-filing project in Vouchap. This project is
+                    By consenting, you agree to start a client-owned tax-filing project in Receiptap. This project is
                     used for collaboration with your authorized firm team. The firm's deliverables, submissions,
                     and final tax-filing outcomes will be recorded in this project.
                   </Text>
@@ -118,9 +118,9 @@ export default function EngagementConsentModal({
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>4) Platform Role, Visibility, and Data Access Boundary</Text>
                   <Text style={styles.sectionText}>
-                    Vouchap acts only as a transmission and collaboration platform. All required client document
-                    checklists and tax-material requests are defined by the firm, not by Vouchap. Your uploaded or
-                    linked tax documents are visible only to the firm you authorize. Vouchap and any third party have
+                    Receiptap acts only as a transmission and collaboration platform. All required client document
+                    checklists and tax-material requests are defined by the firm, not by Receiptap. Your uploaded or
+                    linked tax documents are visible only to the firm you authorize. Receiptap and any third party have
                     no right to access your tax materials, except as required to provide the service under your
                     authorization and applicable law.
                   </Text>
@@ -153,7 +153,7 @@ export default function EngagementConsentModal({
                   <CheckboxRow
                     checked={agreeProject}
                     onPress={() => setAgreeProject((v) => !v)}
-                    label="I agree to start this engagement project and collaborate with my authorized firm in Vouchap."
+                    label="I agree to start this engagement project and collaborate with my authorized firm in Receiptap."
                   />
                   <CheckboxRow
                     checked={agreePullRecords}
@@ -163,7 +163,7 @@ export default function EngagementConsentModal({
                   <CheckboxRow
                     checked={agreePlatformBoundary}
                     onPress={() => setAgreePlatformBoundary((v) => !v)}
-                    label="I understand that Vouchap is only a transmission platform, that document requirements are provided by the firm, and that only my authorized firm can view my tax materials."
+                    label="I understand that Receiptap is only a transmission platform, that document requirements are provided by the firm, and that only my authorized firm can view my tax materials."
                   />
                 </View>
 
@@ -172,7 +172,7 @@ export default function EngagementConsentModal({
           <View style={styles.footer}>
             <Text style={styles.footerText}>
               By continuing, you acknowledge and agree to the{' '}
-              <Text style={styles.link} onPress={() => openUrl(TERMS_URL)}>Vouchap Terms</Text>
+              <Text style={styles.link} onPress={() => openUrl(TERMS_URL)}>Receiptap Terms</Text>
               {' '}and{' '}
               <Text style={styles.link} onPress={() => openUrl(PRIVACY_URL)}>Privacy Policy</Text>.
             </Text>

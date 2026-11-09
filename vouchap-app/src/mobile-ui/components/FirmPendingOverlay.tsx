@@ -83,7 +83,7 @@ export function FirmPendingOverlay() {
           </View>
           <View style={styles.bulletRow}>
             <Text style={styles.bullet}>•</Text>
-            <Text style={styles.text}>Vouchap will notify you once it&apos;s approved.</Text>
+            <Text style={styles.text}>Receiptap will notify you once it&apos;s approved.</Text>
           </View>
           <View style={styles.bulletRow}>
             <Text style={styles.bullet}>•</Text>

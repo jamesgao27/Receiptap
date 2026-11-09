@@ -134,7 +134,7 @@ export default function WebSidebar() {
           style={styles.logoImage}
           resizeMode="contain"
         />
-        <Text style={styles.brandText}>Vouchap</Text>
+        <Text style={styles.brandText}>Receiptap</Text>
       </View>
 
       {/* 空间与主导航整体下移，为品牌区留出视觉空间 */}

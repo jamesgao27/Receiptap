@@ -17,7 +17,7 @@
     "verify:android:permissions": "node scripts/verify-android-media-permissions.js",
     "version:sync": "node scripts/sync-native-versions.js",
     "icons:sync-from-logo2": "bash scripts/sync-native-launcher-icons-from-logo2.sh",
-    "deploy:web": "npx expo export -p web && npx wrangler pages deploy dist --project-name=receiptap",
+    "deploy:web": "npx expo export -p web && npx wrangler pages deploy dist --project-name=vouchap",
     "build:android:production": "cd android && ./gradlew app:bundleRelease",
     "build:android:apk": "cd android && ./gradlew app:assembleRelease",
     "build:android:eas:local": "bash scripts/build-android-eas-local.sh"

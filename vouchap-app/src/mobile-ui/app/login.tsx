@@ -178,7 +178,7 @@ export default function LoginScreen() {
                   style={styles.logoImgMobile}
                   resizeMode="contain"
                 />
-                <Text style={styles.brandNameMobile}>Vouchap</Text>
+                <Text style={styles.brandNameMobile}>Receiptap</Text>
               </View>
               <Text style={styles.sloganMobile}>
                 <Text style={styles.sloganLine1Mobile}>Voucher Snapping,</Text>
@@ -323,7 +323,7 @@ export default function LoginScreen() {
                 style={styles.logoImg}
                 resizeMode="contain"
               />
-              <Text style={styles.brandName}>Vouchap</Text>
+              <Text style={styles.brandName}>Receiptap</Text>
             </View>
             <Text style={styles.slogan}>
               <Text style={styles.sloganLine1}>Voucher Snapping,</Text>

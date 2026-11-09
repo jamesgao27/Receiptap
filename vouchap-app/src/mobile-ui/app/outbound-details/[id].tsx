@@ -371,7 +371,7 @@ export default function OutboundDetailsScreen() {
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        showToast('Vouchap needs access to your camera.', 'info');
+        showToast('Receiptap needs access to your camera.', 'info');
         return;
       }
       const result = await ImagePicker.launchCameraAsync({
@@ -395,7 +395,7 @@ export default function OutboundDetailsScreen() {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        showToast('Vouchap needs access to your photo library.', 'info');
+        showToast('Receiptap needs access to your photo library.', 'info');
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({

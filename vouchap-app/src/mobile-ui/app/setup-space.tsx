@@ -364,7 +364,7 @@ export default function SetupHouseholdScreen() {
             <View style={stylesWeb.header}>
               <View style={stylesWeb.logoRow}>
                 <Image source={require('../../../assets/logo.png')} style={stylesWeb.logoImg} resizeMode="contain" />
-                <Text style={stylesWeb.brandName}>Vouchap</Text>
+                <Text style={stylesWeb.brandName}>Receiptap</Text>
               </View>
               <View style={stylesWeb.iconContainer}>
                 <View style={stylesWeb.circle}>

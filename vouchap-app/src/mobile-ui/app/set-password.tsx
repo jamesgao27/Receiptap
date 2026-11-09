@@ -204,7 +204,7 @@ export default function SetPasswordScreen() {
           <View style={styles.header}>
             <View style={styles.logoRow}>
               <Image source={require('../../../assets/logo.png')} style={styles.logoImg} resizeMode="contain" />
-              <Text style={styles.brandName}>Vouchap</Text>
+              <Text style={styles.brandName}>Receiptap</Text>
             </View>
             <Text style={styles.pageTitle}>Set New Password</Text>
             <Text style={styles.pageSubtitle}>Enter your new password below</Text>
