@@ -1,7 +1,6 @@
-# Original Vouchap Pages project. The site is the Receiptap bookkeeping web.
-# Direct Upload. receiptap.aim.link is attached here after the portalflow
-# Pages project `receiptap` is removed.
-# Do not connect a second Git build.
-name = "vouchap"
+# Receiptap bookkeeping web. Direct Upload only.
+# Project name is the default hostname: receiptap.pages.dev.
+# Do not connect Git.
+name = "receiptap"
 compatibility_date = "2026-08-21"
 pages_build_output_dir = "./dist"

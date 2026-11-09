@@ -11827,3 +11827,16 @@
 - 已删除 Pages 项目 `receiptap`，并把原 Vouchap 网页以名称 Receiptap 发到项目 `vouchap`（`vouchap.pages.dev` 标题为 Receiptap）。`receiptap.aim.link` 已在该项目登记，DNS 仍缺指向 `vouchap.pages.dev` 的 CNAME。  
 - Portalflow 不再构建 Receiptap。Web 空间列表和新建空间只有 Firm。  
 - 客户邀请页仍在，但事务所登录后的 Web 不会进入客户空间。
+
+---
+
+### 2026-11-09（Pages 项目名改为 receiptap）
+
+**User（提示词/原意）**  
+- Cloudflare 的项目名称和默认 URL 要从 vouchap 改成 receiptap。
+
+**Assistant（实现前说明）**  
+- Pages 的 `*.pages.dev` 不能在原项目上改名。新建项目 `receiptap`，把站点发上去，再删掉旧项目 `vouchap`。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 项目名是 `receiptap`，默认地址 https://receiptap.pages.dev 标题为 Receiptap。`receiptap.aim.link` 已指向它。旧项目 `vouchap` 已删除。`vouchap.aim.link` 和 `platform.vouchap.com` 的 CNAME 还没改到 `receiptap.pages.dev`。
