@@ -501,7 +501,7 @@ export default function FirmAddClientModal({
                 <View style={styles.addClientCheckboxRow} pointerEvents="none">
                   <Ionicons name="square-outline" size={18} color="#B2BEC3" style={{ marginRight: 6 }} />
                   <Text style={[styles.addClientCheckboxLabel, { color: '#95A5A6' }]}>
-                    Invite to sign up Receiptap via email?
+                    Invite to sign up Vouchap via email?
                   </Text>
                 </View>
               </View>

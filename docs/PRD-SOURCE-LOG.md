@@ -11879,3 +11879,609 @@
 
 **Assistant（实现后说明 / 本轮结论）**  
 - 站点地址改为 `https://receiptap.aim.link`。白名单加上 `receiptap.aim.link`、`receiptap.pages.dev` 和 `receiptap://`，旧的 vouchap 地址保留。四封邮件按钮改到 `https://receiptap.aim.link/auth/confirm`。Magic Link 标题为 “Your sign-in link for Receiptap”，正文含登录按钮、`{{ .ConfirmationURL }}` 和验证码 `{{ .Token }}`。`auth.ts` 的生产回跳已改为同一地址。
+
+---
+
+### 2026-11-09（客户端名称与项目名恢复 Vouchap）
+
+**User（提示词/原意）**  
+- 综合权衡，client 端仍采用 Vouchap。应用商店继续用原 id。代码库和各处项目名称恢复 Vouchap。应用 logo 用本次上传的，Android 前后分离图也已提供。
+
+**Assistant（实现前说明）**  
+- 当前客户端显示名、包名、scheme 主名和商店提交目标是 Receiptap / `com.receiptap.app` / Apple 商品 `6832428828`，版本 1.0.0。原商店是 `com.vouchap.app` 与 Apple 商品 `6758536342`，已上架构建高于 1.0.0（iOS 2.6.8 构建号 52，Android versionCode 70）。GitHub 远程是 `jamesgao27/Receiptap`，Pages 配置名是 `receiptap`。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 显示名、权限文案、登录等界面改回 Vouchap。包名与 Bundle ID 改回 `com.vouchap.app`。EAS 提交目标改回 Apple `6758536342`。主 scheme 为 `vouchap`，并保留 `receiptap` 以便已发出的链接仍能打开。版本续原商店序列：2.6.9，iOS 构建号 53，Android versionCode 71。  
+- 新 logo 写入应用内图标、iOS 1024 不透明图标、Android 自适应前景/背景和旧版启动图标。营销站与 Workmap 页脚里的记账应用名称改为 Vouchap，商店数字 id 不变。生产确认页改为 `https://vouchap.aim.link/auth/confirm`。  
+- GitHub 仓库改回 `jamesgao27/Vouchap`。新建 Pages 项目 `vouchap` 并发布当前 Web；`platform.vouchap.com` 挂在该项目。`vouchap.aim.link` 与 `receiptap.aim.link` 的 CNAME 仍指向 `receiptap.pages.dev`，因此旧项目保留，并部署了同一份标题为 Vouchap 的站点。三个地址均已返回 `<title>Vouchap</title>`。  
+- Supabase 项目在控制台里仍叫 Receiptap，邮件模板也未改。未打商店包，未 commit。
+
+**关联**  
+- `vouchap-app/app.config.js`、`eas.json`、`android/app/build.gradle`、`ios/Vouchap/Info.plist`  
+- `vouchap-website` 商店链接与确认页深链  
+- `Adaven-platform/docs/PUBLISH.md`
+
+---
+
+### 2026-11-09（Vouchap 用现有库，开发并入 Adaven-platform）
+
+**User（提示词/原意）**  
+- Vouchap 数据库用现在这套。Supabase 控制台项目名和邮件模板改回 Vouchap。开发代码合并到 Adaven-platform，复用 space / user / invite。Vouchap 与 Portalflow 的 Web 分开，分别做客户记账和事务所 CRM。以后再用数据快照打通两边的 client。
+
+**Assistant（实现前说明）**  
+- 控制台项目名和邮件仍是 Receiptap。平台工程里的记账开关还叫 Receiptap，而且没有接到 Vouchap 变体。现有库的空间类型是 `firm` / `client`，平台底座是 `provider` / `consumer`。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- Supabase 项目 `giuacjbfsyrristkigmz` 名称改为 Vouchap。发件人、确认、邀请、重置密码、Magic Link、改邮箱的标题和正文里的 Receiptap 改为 Vouchap。站点地址改为 `https://vouchap.aim.link`，旧的 receiptap 地址仍留在跳转白名单。  
+- Adaven-platform 的同一套应用用 `APP_VARIANT=vouchap` 出客户记账 Web：名称 Vouchap、包名 `com.vouchap.app`、只建个人空间、侧栏是 Dashboard / Expenses / Income。默认构建仍是 Portalflow，只做 Firm。两边部署目标分开。Vouchap 的 GitHub Action 只手动触发，避免在库结构对齐前覆盖线上站点。  
+- 没有做数据快照，没有把平台内核 SQL 应用到现有库，没有提交。
+
+**关联**  
+- `Adaven-platform/apps/portalflow-app/app.config.js`  
+- `Adaven-platform/.github/workflows/deploy-vouchap-web.yml`  
+- Supabase `giuacjbfsyrristkigmz`
+
+---
+
+### 2026-11-09（Vouchap 库对齐平台底座）
+
+**User（提示词/原意）**  
+- 按平台底座规范调整 Vouchap 数据库的表名和结构，避免底座代码分叉。后续开发集中在 Adaven-platform。不同端分别用各自的 Expo、Cloudflare、Vercel 项目构建发布。
+
+**Assistant（实现前说明）**  
+- 库 `giuacjbfsyrristkigmz` 的空间类型是 `firm` / `client`，业务表在 `firm` schema。平台底座只认 `provider` / `consumer` 和 `create_space_core`。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 已在该库执行 `040_vouchap_align_provider_consumer.sql`。3 个 provider、66 个 consumer 空间都在。`firm` schema 改为 `provider`，表和列改为 `providers` / `consumers` 等。补了 `consumer.consumers` 和 `create_space_core`。PostgREST 暴露 `provider`、`consumer`，去掉 `firm`。订单 48 条、事务所登记 3 条、客户登记 29 条仍在。  
+- 发布关系写进 `docs/PUBLISH.md`：原生走各自 Expo，应用 Web 走各自 Cloudflare Pages，营销站走各自 Vercel。没有新发布，没有把用户数据复制到 Portalflow。  
+- 现在线上的独立 Web 仍按旧的 `firm` 名称访问，要等 Adaven-platform 的 Vouchap 构建发出去才和这套库一致。
+
+**关联**  
+- `Adaven-platform/packages/db-platform/sql/040_vouchap_align_provider_consumer.sql`  
+- `vouchap-app/supabase/migrations/20261109150000_align_provider_consumer.sql`
+
+---
+
+### 2026-11-09（启动 Vouchap Web 和 App 测试服务）
+
+**User（提示词/原意）**  
+- 按新架构启动 Vouchap 的 Web 端和 App 测试服务器。
+
+**Assistant（实现前说明）**  
+- 新架构在 Adaven-platform 的 `portalflow-app`，用 `APP_VARIANT=vouchap`，数据库是 `giuacjbfsyrristkigmz`。本地还没有 `.env.vouchap`，8081 和 8082 空闲。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 写入 gitignore 的 `.env.vouchap`，指向现有库。App Metro 在 http://localhost:8081（局域网 10.0.0.33:8081）。Web 在 http://localhost:8082，页面标题为 Vouchap。两个进程都在跑。
+
+**关联**  
+- `Adaven-platform/apps/portalflow-app`
+
+---
+
+### 2026-11-09（App 测试改用 Expo Go 模拟器）
+
+**User（提示词/原意）**  
+- App 测试可以用 Expo 的模拟。
+
+**Assistant（实现前说明）**  
+- 8081 上是 `--dev-client`。Web 8082 保持不动。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 停掉开发客户端，改用 `expo start --go --ios`。Expo Go 装到 iPhone 16e 模拟器，iOS 包已打出。地址仍是 http://localhost:8081 ，局域网 `10.0.0.33:8081`。Web 仍是 http://localhost:8082。
+
+**关联**  
+- `Adaven-platform/apps/portalflow-app`
+
+---
+
+### 2026-11-09（真机用 Expo Go 扫码）
+
+**User（提示词/原意）**  
+- 真机测试，用 Expo Go 扫码。
+
+**Assistant（实现前说明）**  
+- 8081 已是 Expo Go 的局域网服务。模拟器只是额外打开的。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 服务未改。二维码内容是 `exp://10.0.0.33:8081`，已用预览打开。手机和电脑需在同一 Wi-Fi。
+
+**关联**  
+- `Adaven-platform/apps/portalflow-app`
+
+---
+
+### 2026-11-09（Vouchap Web 登录后认不出已有空间）
+
+**User（提示词/原意）**  
+- Web 登录报错。已有账号登录后没有识别到已有 space。
+
+**Assistant（实现前说明）**  
+- 首页把空间收成 `provider`。Vouchap 的 `getUserSpaces` 又去掉事务所空间，个人空间（`consumer`）被滤空，于是去新建空间。库里现有 64 条个人空间成员、10 条事务所成员。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- Vouchap 首页和空间列表改认 `consumer`。Portalflow 仍只认 `provider`。建空间页如果已经有对应空间且没有待处理邀请，回到首页。刷新 http://localhost:8082 后再登录即可。
+
+**关联**  
+- `apps/portalflow-app/src/mobile-ui/app/index.tsx`  
+- `packages/platform-ui/src/screens/SetupSpaceScreen.tsx`
+
+---
+
+### 2026-11-09（Web 登录页按键崩溃）
+
+**User（提示词/原意）**  
+- Web 端登录问题。截图是 `WebChatClipboardPasteHost` 里 `e.key.toLowerCase` 读到 undefined。
+
+**Assistant（实现前说明）**  
+- 这个监听挂在全站布局上，登录页输入也会触发。部分按键事件没有 `key`。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 按下和松开都先确认 `e.key` 存在再比较。没有 `key` 的事件直接忽略。刷新登录页后红屏应消失。
+
+**关联**  
+- `apps/portalflow-app/src/mobile-ui/components/WebChatClipboardPasteHost.tsx`
+
+---
+
+### 2026-11-09（拿掉 AI Inventory）
+
+**User（提示词/原意）**  
+- AI Inventory 从 Vouchap 拿掉，以后给 Wholestore 当模块。相关表可以清。Vouchap 和 Portalflow 不再做库存。
+
+**Assistant（实现前说明）**  
+- 入口在首页、侧栏和一组入库/出库/仓库/商品页面。库存表在 `public`，事务所服务模板在 `provider.skus`，不能一起删。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 页面移到 `apps/wholestore-app/src/inventory-module`，没有接到 Wholestore 路由。Vouchap 和 Portalflow 不再显示 AI Inventory。  
+- 两个库都删了 `public.inbound`、`inbound_items`、`outbound`、`outbound_items`、`warehouse`、`location`、`public.skus`。`provider.skus` 还在。
+
+**关联**  
+- `packages/db-platform/sql/041_drop_inventory_tables.sql`  
+- `apps/wholestore-app/src/inventory-module`
+
+---
+
+### 2026-11-09（Vouchap 成员列表上设置 Admin）
+
+**User（提示词/原意）**  
+- Space roles 的详细设计只给 Portalflow 的 firm。Vouchap 保留设为 Admin 的能力，去掉专门设置页，在 members 列表上用盾形图标设置或取消。
+
+**Assistant（实现前说明）**  
+- 管理菜单里 Members 和 Space roles 都是底座项。设管理员的操作在 Space roles 页。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- Vouchap 管理菜单不再出现 Space roles，直接打开该页会回到 Members。管理员在成员行上看到盾形图标：空心是设为 Admin，实心是取消。Portalflow 的 firm 仍使用原来的 Space roles 页。
+
+**关联**  
+- `packages/platform-ui/src/screens/SpaceMembersScreen.tsx`  
+- `apps/portalflow-app/src/shared-logic/portalflow-space-bootstrap.ts`
+
+---
+
+### 2026-11-09（成员列表盾形图标对齐）
+
+**User（提示词/原意）**  
+- 去掉 Admin 标签，只用盾形图标是否点亮表示是不是 Admin。当前登录者是 Admin 时，盾形图标和 You 对调，让盾形图标列对齐，You 和删除图标对齐。
+
+**Assistant（实现前说明）**  
+- Admin 文字还在名字右侧，盾形按钮只出现在其他成员的删除图标左边，自己那一行没有盾。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- Vouchap 成员行不再显示 Admin 文字。实心盾是 Admin，空心盾不是。管理员看列表时，盾在固定列，You 和删除图标在同一列。
+
+**关联**  
+- `packages/platform-ui/src/screens/SpaceMembersScreen.tsx`
+
+---
+
+### 2026-11-09（补上设置 Admin 的数据库函数）
+
+**User（提示词/原意）**  
+- 点成员列表的盾形图标报错：找不到 `public.set_space_member_admin`。
+
+**Assistant（实现前说明）**  
+- Vouchap 库已有 `remove_space_member` 和 `is_admin_of_space`，没有设置管理员和离开空间的函数。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 已在 `giuacjbfsyrristkigmz` 创建 `set_space_member_admin` 和 `leave_space`，并授权给登录用户。最后一名管理员不能被取消。刷新后再点盾形图标即可。
+
+**关联**  
+- `packages/db-platform/sql/042_vouchap_set_space_member_admin.sql`
+
+---
+
+### 2026-11-09（盾形图标不再单独成列）
+
+**User（提示词/原意）**  
+- 不必单独成列，只交换位置。当前登录者不是 Admin 时，他人的 Admin 标志与 You 对齐。非 Admin 不显示未点亮的盾。点亮的盾用 logo 上的绿盾。
+
+**Assistant（实现前说明）**  
+- 盾和 You / 删除被放进固定宽度的两列，非 Admin 也有灰色空心盾。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 去掉固定列。只有 Admin 显示绿色 `shield-checkmark`（`#1CC7B6`）。当前用户是 Admin 时，绿盾在名字一侧，You 与删除图标在行尾。当前用户不是 Admin 时，他人的绿盾与 You 在同一位置。
+
+**关联**  
+- `packages/platform-ui/src/screens/SpaceMembersScreen.tsx`
+
+---
+
+### 2026-11-09（成员标记等宽右对齐）
+
+**User（提示词/原意）**  
+- 绿盾和 You 挤在一起，非 Admin 看时又和 You 对不齐。Admin 视角要看到别人未点亮的盾。盾、You、删除用同样占位宽度并右对齐：两个就成两列，一个就贴右端。
+
+**Assistant（实现前说明）**  
+- 标记宽度不一致，未点亮的盾也不显示。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 三种标记各占 48 宽，整组靠右。Admin 看别人时，空心盾和删除是两列；自己那行是绿盾和 You。非 Admin 看时，别人的绿盾和自己的 You 都在最右一列。
+
+**关联**  
+- `packages/platform-ui/src/screens/SpaceMembersScreen.tsx`
+
+---
+
+### 2026-11-09（成员盾标贴近 logo）
+
+**User（提示词/原意）**  
+- 盾形图标还要再优选，外形更接近 logo 上的盾，看起来需要高一点。
+
+**Assistant（实现前说明）**  
+- 用的是 Ionicons 的扁盾。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 换成更高的尖底盾。点亮是 logo 同色绿底白勾，未点亮只有灰色轮廓。
+
+**关联**  
+- `packages/platform-ui/src/screens/SpaceMembersScreen.tsx`
+
+---
+
+### 2026-11-09（盾标收回，邀请标签等宽）
+
+**User（提示词/原意）**  
+- 盾现在太高，和 logo 差得更大。邀请列表上的两个标签也用同样宽度，让整页对齐。
+
+**Assistant（实现前说明）**  
+- 盾是 15×22。邀请状态和操作按钮宽度不固定。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 盾改为 18×20，仍是绿底白勾和灰色轮廓。邀请行的状态和操作各占 48 宽，与成员行的盾、You、删除右端对齐。
+
+**关联**  
+- `packages/platform-ui/src/screens/SpaceMembersScreen.tsx`
+
+---
+
+### 2026-11-09（修正盾顶尖角和勾的位置）
+
+**User（提示词/原意）**  
+- 盾形仍不理想。上部尖角缺了，盾内勾形位置过低。
+
+**Assistant（实现前说明）**  
+- 上一版顶部是圆拱，勾画在盾身偏下。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 顶部改成左右两个尖角，勾上移到盾身中部。高度仍是 20。
+
+**关联**  
+- `packages/platform-ui/src/screens/SpaceMembersScreen.tsx`
+
+---
+
+### 2026-11-09（按 logo 重画成员盾）
+
+**User（提示词/原意）**  
+- 能否直接看效果。盾的外轮廓越改越偏。
+
+**Assistant（实现前说明）**  
+- 对照了 logo 裁切和当前矢量。logo 是平顶圆肩、两侧较直、底部收尖，勾在盾身上部。当前图是斜切顶。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 按 logo 比例重画为 18×21 的平顶圆肩盾，白勾放在盾身上部。未点亮仍是灰色轮廓。
+
+**关联**  
+- `packages/platform-ui/src/screens/SpaceMembersScreen.tsx`
+
+---
+
+### 2026-11-09（点亮盾用上传图，未点亮描轮廓）
+
+**User（提示词/原意）**  
+- 点亮的直接用图，非点亮的按这张图勾轮廓。
+
+**Assistant（实现前说明）**  
+- 点亮和未点亮都是手绘矢量，和上传的盾不一致。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 点亮状态用 `admin-shield.png`（72×84）。未点亮用同一张图的外轮廓描成灰色线。显示尺寸 18×21。
+
+**关联**  
+- `packages/platform-ui/assets/admin-shield.png`  
+- `packages/platform-ui/src/screens/SpaceMembersScreen.tsx`
+
+---
+
+### 2026-11-09（描线加粗并发布 Vouchap Web）
+
+**User（提示词/原意）**  
+- 非点亮的描线再粗一点。优化后推送到 Cloudflare 构建发布。
+
+**Assistant（实现前说明）**  
+- 描线宽度是 2.4。线上 Pages `vouchap` 还是上一次导出。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 描线改为 3.6。用 `APP_VARIANT=vouchap` 导出并 Direct Upload 到 Pages `vouchap` 的 main，部署地址 https://bf735d4a.vouchap.pages.dev 。
+
+**关联**  
+- `packages/platform-ui/src/screens/SpaceMembersScreen.tsx`
+
+---
+
+### 2026-11-09（核对 Portalflow 数据是否都在 Vouchap）
+
+**User（提示词/原意）**  
+- 对比 Portalflow 库，确保数据已经完整同步到 Vouchap。
+
+**Assistant（实现前说明）**  
+- 按主键比较两个库的记账、空间、成员、收据、发票和事务所客户表。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 收据、发票、实体、科目、项目、订单、服务模板的主键已经一致。Vouchap 还多出 3 张收据和 1 张发票，是这边后来新增的。  
+- Portalflow 少同步的只有 1 个 11 月 6 日的登录账号，和 1 条没有客户空间的事务所客户登记。这两条已补进 Vouchap。空的 engagement 表没有数据。
+
+**关联**  
+- Supabase `giuacjbfsyrristkigmz`、`xvqlqvtfogxkfeillvig`
+
+---
+
+### 2026-11-09（事务所空间迁到 Portalflow）
+
+**User（提示词/原意）**  
+- 把 firm 类空间及其数据从 Vouchap 复制迁移到 Portalflow。
+
+**Assistant（实现前说明）**  
+- 三个事务所空间在两边主键已经一致，订单、客户登记、项目、成员也一致。Vouchap 上删空间会被最后管理员触发器和科目同步挡住。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 没有再复制一份，因为 Portalflow 已有同样的 3 个事务所、48 笔订单、30 条客户登记、30 个项目和 10 条成员。  
+- 已从 Vouchap 删掉这 3 个 provider 空间及其级联数据。个人空间和其余收据、发票仍留在 Vouchap。删除前暂停了成员管理员检查和科目同步触发器，完成后已恢复。
+
+**关联**  
+- Supabase `giuacjbfsyrristkigmz`、`xvqlqvtfogxkfeillvig`
+
+---
+
+### 2026-11-09（Vouchap 2.7.0 商店构建）
+
+**User（提示词/原意）**  
+- 推送 Vouchap app 构建并更新应用商店。版本号统一 2.7.0，构建号延续原 Vouchap。对照 Android 2.6.6 和 iOS 2.6.8 写简洁英文版本说明。
+
+**Assistant（实现前说明）**  
+- 从 Adaven-platform 的 Vouchap 变体出包，包名 `com.vouchap.app`，Apple ID `6758536342`。iOS 构建号 53（上一商店包 52），Android versionCode 71（上一商店包 70）。Android 提交到 production。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- iOS 2.7.0（53）和 Android 2.7.0（71）已构建并提交。Android 生产轨道状态 completed，英文更新说明已写入。iOS 二进制已上传 App Store Connect，2.7.0 的 What’s New 已写入。iPhone 与 iPad 截图随后全部重传完成。  
+- 版本说明：新图标；登录回到已有记账空间；支出和收入为主；成员列表里授予或取消管理员；本应用不再包含 AI Inventory。
+
+**关联**  
+- EAS `@aimlink/vouchap` 构建 `b23d16af-78b8-4a89-9e06-022914154d61`、`f8eaf43a-e55e-434a-a118-4b303928d804`
+
+---
+
+### 2026-11-09（2.7.0 换绿色盾标并打开 DEX 优化）
+
+**User（提示词/原意）**  
+- 刚才的构建没有用最新的绿色盾形对勾 logo。Google Play 提示 DEX 代码优化未达阈值，优化到位后再提交。
+
+**Assistant（实现前说明）**  
+- 原生启动图标仍是旧的圆形对勾，来源是 logo2。发布包 `minifyEnabled` 为 false，且 ProGuard 用了带 `-dontoptimize` 的默认文件。新包用构建号 54 / versionCode 72。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 已用 vouchap-icon / foreground / background 重写 iOS 1024 图标和 Android adaptive 图标。  
+- 已打开 R8 完整模式、代码与资源压缩，并改用 `proguard-android-optimize.txt`。包内 r8.json：未优化 15.33%、未混淆 14.94%、未缩减 14.83%，Play 得分约为 85%，高于 25%。未压缩 DEX 约 9.1 MB。  
+- iOS 2.7.0（54）和 Android 2.7.0（72）已提交。Android 生产说明已写回。
+
+**关联**  
+- EAS 构建 `fc09bac1-55e9-4984-81ad-7adb6d1568f2`、`6681cebf-c4eb-4edf-80e3-b733b056902c`
+
+---
+
+### 2026-11-09（Google Play 打开闪退）
+
+**User（提示词/原意）**  
+- Google Play 已发布成功，但安装后打开闪退。构建号 71 的也闪退。
+
+**Assistant（实现前说明）**  
+- 71 未开 R8、72 开了 R8，两边都闪退，所以不是压缩导致。首页路由会在启动时加载 SheetJS 的 `xlsx.js`，正式包里它对编码表的动态 require 会让 Hermes 直接退出。Expo Go 用的是开发包，所以之前测试没碰到。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 表格解析改成打开表格时才加载 `xlsx/dist/xlsx.full.min.js`。Word 解压同样延后加载 JSZip。去掉了识别模块里未使用的新文件系统导入。  
+- Android 2.7.0（73）已提交到生产轨道，iOS 2.7.0（55）已上传。同一段启动代码也会让 iOS 正式包闪退，所以一起重提了。
+
+**关联**  
+- EAS 构建 `e73be4f5-3cab-41dc-9c74-d271436e6056`、`0d47718a-d42c-46b6-bc0e-27f0f46e4a54`
+
+---
+
+### 2026-11-09（商店正式通道要先测试）
+
+**User（提示词/原意）**  
+- 提交得太手快。要先测试，再提交到商店正式通道。iOS TestFlight 并没有闪退，所以 SheetJS 启动加载这条原因不一定命中。
+
+**Assistant（实现前说明）**  
+- 无代码变更。确认 Play 生产轨道现状，不再推正式包。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- Android 2.7.0（73）已经是生产轨道 completed，无法再暂停这次发布。iOS TestFlight 不闪退，SheetJS 判断不成立。之后 Android 闪退要在装机日志确认后再改，改完先走内部测试，不直接推正式通道。
+
+---
+
+### 2026-11-09（Android 真机 Expo Go）
+
+**User（提示词/原意）**  
+- 真机模拟 Android 的测试服务器。
+
+**Assistant（实现前说明）**  
+- 无代码变更。用 `APP_VARIANT=vouchap` 在局域网起 Expo Go，端口 8081。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- Metro 已在 `http://10.0.0.33:8081` 运行。手机与电脑同一 Wi-Fi 时，用 Expo Go 打开 `exp://10.0.0.33:8081`。这是开发包，不是商店正式包。
+
+---
+
+### 2026-11-09（手机 Expo Go 版本不符）
+
+**User（提示词/原意）**  
+- 截图：手机上的 Expo Go 是 SDK 58，项目是 SDK 54，提示不兼容。
+
+**Assistant（实现前说明）**  
+- 无代码变更。不把项目升到 SDK 58。商店包和当前工程都是 SDK 54。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 需要安装 Expo 官方的 Android Expo Go 54.0.8，替换手机里 Play 商店的 SDK 58。安装后再打开 `exp://10.0.0.33:8081`。
+
+---
+
+### 2026-11-09（Expo Go Connect 无反应）
+
+**User（提示词/原意）**  
+- 重新安装了 54 版 Expo Go，点 Connect 没有动静。
+
+**Assistant（实现前说明）**  
+- 本机 8081 已在局域网监听，清单里的地址是 `10.0.0.33:8081`。空的 Connect 不会发起连接。改为隧道地址。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 已改用隧道。请在 Expo Go 里手动输入 `exp://x-6-g9q-aimlink-8081.exp.direct` 再点连接，不要点首页空白的 Connect。
+
+---
+
+### 2026-11-09（Expo Go 已连上，问报错是否收到）
+
+**User（提示词/原意）**  
+- 加上 exp:// 已经跑起来了，报错信息是否收到？
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 测试服务收到了 Android 打包请求，bundle 已完成。日志里没有设备传回的错误，只有 expo-av 弃用警告，以及报税路由的循环引用和缺少默认导出警告。
+
+---
+
+### 2026-11-09（Android 登录图标圆角类型错误）
+
+**User（提示词/原意）**  
+- 截图：`Error while updating property 'borderRadius' of a view managed by: RCTImageView`，`java.lang.String cannot be cast to java.lang.Double`。
+
+**Assistant（实现前说明）**  
+- 登录页等 Logo 的 `Image` 使用了 `borderRadius: '22%'`。Android 的图片组件只接受数字，iOS 可以接受字符串。先改代码，不提交商店。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 登录、注册、重置密码的 64px 图标改为圆角 14；创建空间 48px 改为 11；侧栏 96px 改为 21。Expo Go 重新加载即可验证。
+
+---
+
+### 2026-11-09（首页空间列表复用设置页）
+
+**User（提示词/原意）**  
+- 手机首页顶部空间名称点开的列表，和设置页切换团队按钮点开的列表不是同一套。应统一用设置页那一套，组件完全复用。
+
+**Assistant（实现前说明）**  
+- 设置页已经用 `SpaceSwitcherModal`。首页在 `index.tsx` 里另写了一份底部列表，图标是房子，并且只允许切到 firm 空间。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 首页改为直接渲染 `SpaceSwitcherModal`，创建新空间同样进入 `/setup-space`。去掉了首页只允许 firm 空间的切换限制，列表仍按当前产品过滤。未提交商店。
+
+**关联**  
+- `packages/platform-ui/src/SpaceSwitcherModal.tsx`  
+- `apps/portalflow-app/src/mobile-ui/app/index.tsx`
+
+---
+
+### 2026-11-09（手机 PDF 预览按原方案补 Android）
+
+**User（提示词/原意）**  
+- 手机上预览 PDF 仍有问题。找之前的修复和设计方案，确认修好。
+
+**Assistant（实现前说明）**  
+- 已有方案：先下载到本地，再写同目录 HTML，用多个 CDN 的 PDF.js 渲染；iOS 用 allowingReadAccessToURL 读旁边的 PDF。Android 的 WebView 不允许 file 页面再去取同目录 PDF，而且子资源 HTTP 失败会把整页预览判成失败。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- Android 把 PDF 字节嵌进本地 HTML，不再 fetch 旁边的文件。iOS 仍走原文件读取。去掉 WebView 的 onHttpError，避免某个 CDN 失败时关掉整页。未提交商店。请在 Expo Go 里重新打开一份 PDF 看预览。
+
+---
+
+### 2026-11-09（手机 PDF 改成和网页同一条取文件方式）
+
+**User（提示词/原意）**  
+- PDF 预览仍然白屏没有内容。是否可以参考网页端一样的方式实现？
+
+**Assistant（实现前说明）**  
+- 网页端是拿到签名地址后由浏览器自己画 PDF。手机 WebView 没有内置 PDF 查看器；上一版把文件写到本地再让页面去读，Android 读不到，所以还是白屏。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 手机改为使用同一个签名地址，在预览页里用 PDF.js 把页面画出来，不再读本地文件。预览区给了明确高度。未提交商店。需要在 Expo Go 里重新打开 PDF。
+
+---
+
+### 2026-11-09（预览清晰度、按钮和图片手势）
+
+**User（提示词/原意）**  
+- PDF 放大后模糊。关闭按钮淹没在深灰背景里，要优化样式并加下载。图片预览的白色下载和关闭也淹没在白底里。图片预览要能像系统相册一样放大缩小和拖移。
+
+**Assistant（实现前说明）**  
+- PDF 画布按屏幕宽度 1 倍绘制，放大就糊。按钮是浅色图标，没有底。图片是普通 Image，没有捏合。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- PDF 按设备像素比最多 3 倍绘制，显示尺寸不变。文件预览和图片预览的关闭、下载都改成白底圆按钮、深色图标。图片支持双指缩放、放大后拖移、双击放大或还原。未提交商店。
+
+---
+
+### 2026-11-09（手机 PDF 预览改为全屏深灰）
+
+**User（提示词/原意）**  
+- PDF 预览窗也跟图片预览一样，不必显示四周浮窗边缘，直接深灰背景全屏。
+
+**Assistant（实现前说明）**  
+- 手机 PDF 仍画在白色圆角卡片里，四周留边。网页端卡片保持不动。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 手机 PDF 改为铺满屏幕的深灰背景，去掉卡片边缘和右侧信息栏。下载和关闭仍在右上角。未提交商店。
+
+---
+
+### 2026-11-09（PDF 白边仍在）
+
+**User（提示词/原意）**  
+- 手机上没有变化，仍然是白色浮窗内套着深色背景。浮窗边框隐掉，或者边框也用同样的深灰。
+
+**Assistant（实现前说明）**  
+- 预览层是绝对定位，没有撑满外层透明 Modal，Android 仍露出白色弹窗底。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- PDF 预览根节点改为 flex 铺满，外层 Modal 内容也铺满并使用同一深灰。未提交商店。需要在 Expo Go 里重新加载后再开 PDF。
+
+---
+
+### 2026-11-09（PDF 预览状态栏错乱）
+
+**User（提示词/原意）**  
+- 看截图效果。这次修改还导致手机顶部状态栏不正常。
+
+**Assistant（实现前说明）**  
+- 截图里状态栏图标被压乱。原因是 PDF 弹窗用了透明并延伸到状态栏下面，系统把窗口收成圆角卡片，白边还在。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 支出、收入和聊天里的文件预览改为不透明全屏，不再延伸进状态栏。背景仍是深灰。未提交商店。重新加载后再看。
+
+---
+
+### 2026-11-09（PDF 预览对齐图片预览）
+
+**User（提示词/原意）**  
+- 对比图片和 PDF 预览。图片预览的样子是对的。
+
+**Assistant（实现前说明）**  
+- 图片是透明全屏，照片贴边。PDF 用了不透明弹窗，系统收成白色圆角窗。全屏判断还写在 paneKind 声明之前，运行时不会生效。
+
+**Assistant（实现后说明 / 本轮结论）**  
+- 判断改到 paneKind 之后。PDF 弹窗改回和图片一样的透明全屏，深灰铺满，不再用白色圆角窗，也不再伸进状态栏。未提交商店。

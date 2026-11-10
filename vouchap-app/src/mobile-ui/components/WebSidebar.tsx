@@ -130,11 +130,11 @@ export default function WebSidebar() {
       {/* 品牌：仅 Web 大屏左侧栏使用 logo3；其余页面用 logo.png */}
       <View style={styles.brand}>
         <Image
-          source={require('../../../assets/receiptap-icon.png')}
+          source={require('../../../assets/vouchap-icon.png')}
           style={styles.logoImage}
           resizeMode="contain"
         />
-        <Text style={styles.brandText}>Receiptap</Text>
+        <Text style={styles.brandText}>Vouchap</Text>
       </View>
 
       {/* 空间与主导航整体下移，为品牌区留出视觉空间 */}

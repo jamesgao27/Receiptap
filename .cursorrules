@@ -2,7 +2,7 @@
 
 - **对话/实现溯源日志**：凡本轮有实质内容（含与 PRD 无关的 engineering 任务），助手须在 `docs/PRD-SOURCE-LOG.md` 追加「用户提示词 + 实现前/后说明」；改代码时必须写清前后说明。细则见 `.cursor/rules/prd-source-log.mdc`。
 - **vouchap-app**：主应用（移动端 + Web），位于 `./vouchap-app`。逻辑分层：`src/shared-logic`（API、收据解析等共用）、`src/mobile-ui`（移动端 UI）、`src/web-ui`（Web UI）。运行 Web：在 `vouchap-app` 下执行 `npm run web`。
-- **独立代码**：Vouchap 维持独立全套实现，禁止依赖 `Adaven-platform` / `@adaven/platform-*`。Portalflow（Adaven-platform）业务对齐 Vouchap，并走平台统一 space 架构。
+- **开发位置**：客户记账与事务所 CRM 在 `Adaven-platform` 里同步开发，共用 space / user / invite 底座。Vouchap Web 用 `APP_VARIANT=vouchap` 和现在的 Supabase `giuacjbfsyrristkigmz`；Portalflow Web 只做 Firm CRM。两边数据库不合并，client 数据以后用快照打通。本仓库保留现有原生工程和当前库上的线上 Web，直到平台变体可以接上这套库。
 - **vouchap-website**、**Adaven-CRM**（原 vouchap-crm，目录 `/Users/macbook/Adaven-CRM`）：保留在本 Workspace 中，与 vouchap-app 并列。
 - **Project-map**：原 vouchap-web，已更名为 Project-map（目录位于 /Users/macbook/Project-map），包含空间与成员配置及 Mind Map 等，已拷贝所需共享逻辑实现单独自洽。请从本多根 Workspace 中移除「vouchap-web」根目录（若仍存在），Project-map 可单独打开使用。
 - 产品的UI文案必须全英文，避免翻译错误。

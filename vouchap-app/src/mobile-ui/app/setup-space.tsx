@@ -363,8 +363,8 @@ export default function SetupHouseholdScreen() {
             </TouchableOpacity>
             <View style={stylesWeb.header}>
               <View style={stylesWeb.logoRow}>
-                <Image source={require('../../../assets/receiptap-icon.png')} style={stylesWeb.logoImg} resizeMode="contain" />
-                <Text style={stylesWeb.brandName}>Receiptap</Text>
+                <Image source={require('../../../assets/vouchap-icon.png')} style={stylesWeb.logoImg} resizeMode="contain" />
+                <Text style={stylesWeb.brandName}>Vouchap</Text>
               </View>
               <View style={stylesWeb.iconContainer}>
                 <View style={stylesWeb.circle}>

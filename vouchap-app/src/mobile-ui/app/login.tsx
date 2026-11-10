@@ -174,11 +174,11 @@ export default function LoginScreen() {
             <View style={styles.headerMobile}>
               <View style={styles.logoRowMobile}>
                 <Image
-                  source={require('../../../assets/receiptap-icon.png')}
+                  source={require('../../../assets/vouchap-icon.png')}
                   style={styles.logoImgMobile}
                   resizeMode="contain"
                 />
-                <Text style={styles.brandNameMobile}>Receiptap</Text>
+                <Text style={styles.brandNameMobile}>Vouchap</Text>
               </View>
               <Text style={styles.sloganMobile}>
                 <Text style={styles.sloganLine1Mobile}>Voucher Snapping,</Text>
@@ -319,11 +319,11 @@ export default function LoginScreen() {
           <View style={styles.header}>
             <View style={styles.logoRow}>
               <Image
-                source={require('../../../assets/receiptap-icon.png')}
+                source={require('../../../assets/vouchap-icon.png')}
                 style={styles.logoImg}
                 resizeMode="contain"
               />
-              <Text style={styles.brandName}>Receiptap</Text>
+              <Text style={styles.brandName}>Vouchap</Text>
             </View>
             <Text style={styles.slogan}>
               <Text style={styles.sloganLine1}>Voucher Snapping,</Text>

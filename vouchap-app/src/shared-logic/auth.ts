@@ -933,7 +933,7 @@ export async function signUp(email: string, password: string, householdName?: st
                   process.env.NODE_ENV === 'development';
     const redirectUrl = isDev 
       ? 'exp://localhost:8081/--/auth/confirm' // 开发环境
-      : 'https://receiptap.aim.link/auth/confirm'; // 生产环境使用 Receiptap Web
+      : 'https://vouchap.aim.link/auth/confirm'; // 生产环境使用 Vouchap Web
     
     // 准备用户信息，用于在 data 中传递（即使需要邮箱确认也能使用）
     const userNameFinal = userName || email.split('@')[0];
@@ -1362,7 +1362,7 @@ export async function resetPassword(email: string): Promise<{ error: Error | nul
         process.env.NODE_ENV === 'development';
       redirectUrl = isDev
         ? 'exp://localhost:8081/--/auth/confirm'
-        : 'https://receiptap.aim.link/auth/confirm';
+        : 'https://vouchap.aim.link/auth/confirm';
     }
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {

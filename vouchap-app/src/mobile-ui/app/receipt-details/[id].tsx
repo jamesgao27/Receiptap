@@ -837,7 +837,7 @@ export default function ReceiptDetailsScreen() {
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        showToast('Receiptap needs access to your camera to take photos.', 'info');
+        showToast('Vouchap needs access to your camera to take photos.', 'info');
         return;
       }
       const result = await ImagePicker.launchCameraAsync({
@@ -861,7 +861,7 @@ export default function ReceiptDetailsScreen() {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        showToast('Receiptap needs access to your photo library to upload images.', 'info');
+        showToast('Vouchap needs access to your photo library to upload images.', 'info');
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({

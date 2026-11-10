@@ -227,7 +227,7 @@ export default function RegisterScreen() {
           </View>
           <Text style={styles.modalTitle}>Check Your Email</Text>
           <Text style={styles.modalMessage}>
-            You're just one step away from getting organized on Receiptap.
+            You're just one step away from getting organized on Vouchap.
           </Text>
           <Text style={styles.modalSubMessage}>
             Please check the email you received to verify your account.
@@ -293,8 +293,8 @@ export default function RegisterScreen() {
             </TouchableOpacity>
             <View style={stylesWeb.header}>
               <View style={stylesWeb.logoRow}>
-                <Image source={require('../../../assets/receiptap-icon.png')} style={stylesWeb.logoImg} resizeMode="contain" />
-                <Text style={stylesWeb.brandName}>Receiptap</Text>
+                <Image source={require('../../../assets/vouchap-icon.png')} style={stylesWeb.logoImg} resizeMode="contain" />
+                <Text style={stylesWeb.brandName}>Vouchap</Text>
               </View>
               <Text style={stylesWeb.title}>{isFromInvite ? 'Complete your profile' : 'Create Account'}</Text>
               <Text style={stylesWeb.subtitle}>

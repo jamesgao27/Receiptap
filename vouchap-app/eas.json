@@ -20,7 +20,7 @@
   "submit": {
     "production": {
       "ios": {
-        "ascAppId": "6832428828"
+        "ascAppId": "6758536342"
       },
       "android": {
         "serviceAccountKeyPath": "./vouchap-f2d1043256dd.json",

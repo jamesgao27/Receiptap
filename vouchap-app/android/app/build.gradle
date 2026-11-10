@@ -89,9 +89,9 @@ android {
 
     namespace 'com.vouchap.app'
     defaultConfig {
-        applicationId 'com.receiptap.app'
-        versionCode 1
-        versionName "1.0.0"
+        applicationId 'com.vouchap.app'
+        versionCode 71
+        versionName "2.6.9"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
 
